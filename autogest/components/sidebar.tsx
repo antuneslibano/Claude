@@ -35,7 +35,14 @@ const nav = [
   { label: "Clientes", href: "/clientes", icon: "◉" },
   { label: "Garantias", href: "/garantias", icon: "◌", disabled: true },
   { label: "Cascos", href: "/cascos", icon: "◎", disabled: true },
-  { label: "Fornecedores", href: "/fornecedores", icon: "◧", disabled: true },
+  {
+    label: "Fornecedores",
+    icon: "◧",
+    children: [
+      { label: "Fornecedores", href: "/fornecedores" },
+      { label: "Ordens de Compra", href: "/ordens-compra" },
+    ],
+  },
   { label: "Financeiro", href: "/financeiro", icon: "◫", disabled: true },
   { label: "Relatórios", href: "/relatorios", icon: "◩", disabled: true },
 ]
