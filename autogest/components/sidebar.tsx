@@ -24,7 +24,14 @@ const nav = [
       { label: "Saída de Estoque", href: "/estoque/saida" },
     ],
   },
-  { label: "Vendas", href: "/vendas", icon: "◈", disabled: true },
+  {
+    label: "Vendas",
+    icon: "◈",
+    children: [
+      { label: "Histórico de Vendas", href: "/vendas" },
+      { label: "Nova Venda", href: "/vendas/nova" },
+    ],
+  },
   { label: "Clientes", href: "/clientes", icon: "◉" },
   { label: "Garantias", href: "/garantias", icon: "◌", disabled: true },
   { label: "Cascos", href: "/cascos", icon: "◎", disabled: true },
