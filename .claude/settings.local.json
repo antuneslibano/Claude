@@ -32,7 +32,10 @@
       "Bash(Out-Null)",
       "Bash(New-Item -ItemType Directory -Path \"c:\\\\Users\\\\antun\\\\Downloads\\\\Claude\\\\autogest\\\\app\\\\\\(app\\)\\\\vendas\\\\nova\" -Force)",
       "Bash(New-Item -ItemType Directory -Path \"c:\\\\Users\\\\antun\\\\Downloads\\\\Claude\\\\autogest\\\\app\\\\\\(app\\)\\\\vendas\\\\[id]\" -Force)",
-      "Bash(Write-Output \"dirs created\")"
+      "Bash(Write-Output \"dirs created\")",
+      "PowerShell(New-Item -ItemType Directory -Force -Path \"c:\\\\Users\\\\antun\\\\Downloads\\\\Claude\\\\autogest\\\\app\\\\\\(app\\)\\\\financeiro\\\\transacoes\")",
+      "PowerShell(New-Item -ItemType Directory -Force -Path \"c:\\\\Users\\\\antun\\\\Downloads\\\\Claude\\\\autogest\\\\app\\\\\\(app\\)\\\\financeiro\\\\nova\")",
+      "PowerShell(New-Item -ItemType Directory -Force -Path \"c:\\\\Users\\\\antun\\\\Downloads\\\\Claude\\\\autogest\\\\app\\\\\\(app\\)\\\\financeiro\\\\categorias\")"
     ]
   },
   "hooks": {
