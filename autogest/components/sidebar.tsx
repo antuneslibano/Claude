@@ -33,6 +33,7 @@ const nav: NavItem[] = [
     children: [
       { label: "Histórico de Vendas", href: "/vendas" },
       { label: "Nova Venda", href: "/vendas/nova" },
+      { label: "Crediário", href: "/crediario" },
     ],
   },
   { label: "Clientes", href: "/clientes", icon: "◉" },
