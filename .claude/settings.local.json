@@ -35,7 +35,10 @@
       "Bash(Write-Output \"dirs created\")",
       "PowerShell(New-Item -ItemType Directory -Force -Path \"c:\\\\Users\\\\antun\\\\Downloads\\\\Claude\\\\autogest\\\\app\\\\\\(app\\)\\\\financeiro\\\\transacoes\")",
       "PowerShell(New-Item -ItemType Directory -Force -Path \"c:\\\\Users\\\\antun\\\\Downloads\\\\Claude\\\\autogest\\\\app\\\\\\(app\\)\\\\financeiro\\\\nova\")",
-      "PowerShell(New-Item -ItemType Directory -Force -Path \"c:\\\\Users\\\\antun\\\\Downloads\\\\Claude\\\\autogest\\\\app\\\\\\(app\\)\\\\financeiro\\\\categorias\")"
+      "PowerShell(New-Item -ItemType Directory -Force -Path \"c:\\\\Users\\\\antun\\\\Downloads\\\\Claude\\\\autogest\\\\app\\\\\\(app\\)\\\\financeiro\\\\categorias\")",
+      "Bash(npx prisma *)",
+      "Bash(Start-Process -NoNewWindow -FilePath \"npm\" -ArgumentList \"run\", \"dev\" -WorkingDirectory \"c:\\\\Users\\\\antun\\\\Downloads\\\\Claude\\\\autogest\")",
+      "PowerShell(Start-Process -NoNewWindow -FilePath \"cmd.exe\" -ArgumentList \"/c\", \"cd /d C:\\\\Users\\\\antun\\\\Downloads\\\\Claude\\\\autogest && npm run dev\" -WorkingDirectory \"C:\\\\Users\\\\antun\\\\Downloads\\\\Claude\\\\autogest\")"
     ]
   },
   "hooks": {
