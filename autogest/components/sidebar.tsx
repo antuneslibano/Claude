@@ -12,7 +12,10 @@ const ROLE_LABELS: Record<string, string> = {
   FINANCIAL: "Financeiro",
 }
 
-const nav = [
+interface NavChild { label: string; href: string; disabled?: boolean }
+interface NavItem { label: string; icon?: string; href?: string; disabled?: boolean; children?: NavChild[] }
+
+const nav: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: "▦" },
   {
     label: "Estoque",
@@ -33,7 +36,7 @@ const nav = [
     ],
   },
   { label: "Clientes", href: "/clientes", icon: "◉" },
-  { label: "Garantias", href: "/garantias", icon: "◌", disabled: true },
+  { label: "Garantias", href: "/garantias", icon: "◌" },
   { label: "Cascos", href: "/cascos", icon: "◎", disabled: true },
   {
     label: "Fornecedores",
