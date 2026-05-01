@@ -1,0 +1,45 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(start *)",
+      "Bash(gh auth *)",
+      "Bash(git --version)",
+      "PowerShell(gh auth status 2>&1)",
+      "PowerShell(winget --version 2>&1)",
+      "PowerShell(winget install --id GitHub.cli --silent --accept-package-agreements --accept-source-agreements 2>&1)",
+      "PowerShell($env:PATH = $env:PATH + \";C:\\\\Program Files\\\\GitHub CLI\"; gh --version 2>&1)",
+      "PowerShell($env:PATH = $env:PATH + \";C:\\\\Program Files\\\\GitHub CLI\"; gh auth status 2>&1)",
+      "PowerShell($env:PATH = $env:PATH + \";C:\\\\Program Files\\\\GitHub CLI\"; cd \"C:\\\\Users\\\\antun\\\\Downloads\\\\Claude\"; gh repo create Claude --public --source=. --remote=origin --push 2>&1)",
+      "PowerShell($env:PATH = $env:PATH + \";C:\\\\Program Files\\\\GitHub CLI\"; cd \"C:\\\\Users\\\\antun\\\\Downloads\\\\Claude\"; git add .; git commit -m \"Initial commit\"; gh repo create Claude --public --source=. --remote=origin --push 2>&1)",
+      "Skill(update-config)",
+      "Skill(update-config:*)",
+      "PowerShell(Copy-Item \"C:\\\\Users\\\\antun\\\\Downloads\\\\Claude\\\\login-system\\\\.env.example\" \"C:\\\\Users\\\\antun\\\\Downloads\\\\Claude\\\\login-system\\\\.env\")",
+      "PowerShell(winget install --id OpenJS.NodeJS.LTS --silent --accept-package-agreements --accept-source-agreements 2>&1)",
+      "PowerShell(Start-Process \"http://localhost:3000\")",
+      "PowerShell(Start-Process \"http://localhost:3001\")",
+      "PowerShell(Start-Process \"http://localhost:3001/estoque/produtos\")"
+    ]
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$env:PATH = $env:PATH + \";C:\\Program Files\\GitHub CLI\"; cd C:\\Users\\antun\\Downloads\\Claude; git add .; $status = git status --porcelain; if ($status) { $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'; git commit -m \"Auto-update: $timestamp\"; git push }",
+            "shell": "powershell",
+            "timeout": 60,
+            "statusMessage": "Sincronizando com GitHub..."
+          }
+        ]
+      }
+    ]
+  },
+  "language": "portuguese",
+  "voice": {
+    "enabled": true,
+    "mode": "tap",
+    "autoSubmit": false
+  },
+  "voiceEnabled": true
+}

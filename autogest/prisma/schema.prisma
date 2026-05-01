@@ -1,0 +1,524 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────
+// MULTI-TENANT: EMPRESA E LOJAS
+// ─────────────────────────────────────────
+
+model Company {
+  id        String   @id @default(cuid())
+  name      String
+  cnpj      String?  @unique
+  email     String?
+  phone     String?
+  address   String?
+  logoUrl   String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  stores               Store[]
+  users                User[]
+  brands               Brand[]
+  suppliers            Supplier[]
+  customers            Customer[]
+  products             Product[]
+  financialCategories  FinancialCategory[]
+  vehicleCompatibilities VehicleCompatibility[]
+}
+
+model Store {
+  id        String  @id @default(cuid())
+  companyId String
+  name      String
+  cnpj      String?
+  phone     String?
+  address   String?
+  city      String?
+  state     String?
+  active    Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company              Company               @relation(fields: [companyId], references: [id])
+  userAccess           UserStoreAccess[]
+  stockItems           StockItem[]
+  sales                Sale[]
+  purchaseOrders       PurchaseOrder[]
+  stockMovements       StockMovement[]
+  usedBatteries        UsedBattery[]
+  financialTransactions FinancialTransaction[]
+}
+
+// ─────────────────────────────────────────
+// USUÁRIOS E PERMISSÕES
+// ─────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  companyId String
+  name      String
+  email     String   @unique
+  password  String
+  role      String   @default("SELLER") // ADMIN | MANAGER | SELLER | STOCKIST | FINANCIAL
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company        Company           @relation(fields: [companyId], references: [id])
+  storeAccess    UserStoreAccess[]
+  sales          Sale[]
+  stockMovements StockMovement[]
+  auditLogs      AuditLog[]
+}
+
+model UserStoreAccess {
+  id      String @id @default(cuid())
+  userId  String
+  storeId String
+
+  user  User  @relation(fields: [userId], references: [id])
+  store Store @relation(fields: [storeId], references: [id])
+
+  @@unique([userId, storeId])
+}
+
+// ─────────────────────────────────────────
+// MARCAS E PRODUTOS (BATERIAS)
+// ─────────────────────────────────────────
+
+model Brand {
+  id        String  @id @default(cuid())
+  companyId String
+  name      String
+  active    Boolean @default(true)
+  createdAt DateTime @default(now())
+
+  company                Company                @relation(fields: [companyId], references: [id])
+  products               Product[]
+  vehicleCompatibilities VehicleCompatibility[]
+
+  @@unique([companyId, name])
+}
+
+model Product {
+  id             String  @id @default(cuid())
+  companyId      String
+  brandId        String
+  internalCode   String?
+  barcode        String?
+  model          String   // ex: "60AH Free"
+  amperage       Float    // Ah
+  coldCrankAmps  Float?   // CCA
+  voltage        Float    @default(12)
+  vehicleType    String   // CAR | VAN | TRUCK | MOTORCYCLE | OTHER
+  description    String?
+  costPrice      Float
+  salePrice      Float
+  wholesalePrice Float?   // preço para oficinas/frotas/revendedores
+  warrantyMonths Int      @default(12)
+  weight         Float?
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  company                Company                @relation(fields: [companyId], references: [id])
+  brand                  Brand                  @relation(fields: [brandId], references: [id])
+  stockItems             StockItem[]
+  saleItems              SaleItem[]
+  vehicleCompatibilities VehicleCompatibility[]
+
+  @@unique([companyId, internalCode])
+}
+
+// ─────────────────────────────────────────
+// ESTOQUE (ITEM A ITEM — CADA BATERIA É UM REGISTRO)
+// ─────────────────────────────────────────
+
+model StockItem {
+  id              String   @id @default(cuid())
+  storeId         String
+  productId       String
+  serialNumber    String?
+  batchNumber     String?
+  manufactureDate DateTime?
+  entryDate       DateTime @default(now())
+  status          String   @default("AVAILABLE") // AVAILABLE | SOLD | RESERVED | WARRANTY | EXCHANGE | RETURNED | DISPOSAL
+  location        String?
+  costPrice       Float
+  supplierId      String?
+  purchaseOrderId String?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  store         Store          @relation(fields: [storeId], references: [id])
+  product       Product        @relation(fields: [productId], references: [id])
+  supplier      Supplier?      @relation(fields: [supplierId], references: [id])
+  purchaseOrder PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id])
+  movements     StockMovement[]
+  saleItems     SaleItem[]
+  warranties    Warranty[]
+  usedBatteryReturns UsedBattery[]
+}
+
+model StockMovement {
+  id          String   @id @default(cuid())
+  storeId     String
+  stockItemId String
+  userId      String
+  type        String   // PURCHASE | SALE | EXCHANGE | WARRANTY | RETURN | LOSS | ADJUSTMENT | TRANSFER_IN | TRANSFER_OUT
+  reason      String
+  fromStoreId String?
+  toStoreId   String?
+  saleId      String?
+  warrantyId  String?
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  store     Store     @relation(fields: [storeId], references: [id])
+  stockItem StockItem @relation(fields: [stockItemId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
+  sale      Sale?     @relation(fields: [saleId], references: [id])
+  warranty  Warranty? @relation(fields: [warrantyId], references: [id])
+}
+
+// ─────────────────────────────────────────
+// FORNECEDORES E COMPRAS
+// ─────────────────────────────────────────
+
+model Supplier {
+  id              String  @id @default(cuid())
+  companyId       String
+  name            String
+  cnpj            String?
+  contactName     String?
+  phone           String?
+  email           String?
+  address         String?
+  paymentTerms    String?
+  avgDeliveryDays Int?
+  notes           String?
+  active          Boolean @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  company        Company         @relation(fields: [companyId], references: [id])
+  purchaseOrders PurchaseOrder[]
+  stockItems     StockItem[]
+}
+
+model PurchaseOrder {
+  id            String   @id @default(cuid())
+  storeId       String
+  supplierId    String
+  invoiceNumber String?
+  invoiceUrl    String?
+  purchaseDate  DateTime
+  totalCost     Float
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  store      Store       @relation(fields: [storeId], references: [id])
+  supplier   Supplier    @relation(fields: [supplierId], references: [id])
+  items      StockItem[]
+}
+
+// ─────────────────────────────────────────
+// CLIENTES E VEÍCULOS
+// ─────────────────────────────────────────
+
+model Customer {
+  id        String   @id @default(cuid())
+  companyId String
+  name      String
+  cpfCnpj   String?
+  phone     String?
+  whatsapp  String?
+  email     String?
+  address   String?
+  city      String?
+  state     String?
+  type      String   @default("INDIVIDUAL") // INDIVIDUAL | WORKSHOP | COMPANY | FLEET | RESELLER
+  notes     String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company       Company           @relation(fields: [companyId], references: [id])
+  vehicles      CustomerVehicle[]
+  sales         Sale[]
+  warranties    Warranty[]
+  usedBatteries UsedBattery[]
+  installments  Installment[]
+}
+
+model CustomerVehicle {
+  id          String   @id @default(cuid())
+  customerId  String
+  plate       String?
+  makeId      String?
+  modelId     String?
+  year        Int?
+  vehicleType String?
+  color       String?
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  customer   Customer      @relation(fields: [customerId], references: [id])
+  make       VehicleMake?  @relation(fields: [makeId], references: [id])
+  model      VehicleModel? @relation(fields: [modelId], references: [id])
+  sales      Sale[]
+  warranties Warranty[]
+}
+
+// ─────────────────────────────────────────
+// COMPATIBILIDADE BATERIA × VEÍCULO
+// ─────────────────────────────────────────
+
+model VehicleMake {
+  id      String @id @default(cuid())
+  name    String @unique
+
+  models           VehicleModel[]
+  customerVehicles CustomerVehicle[]
+}
+
+model VehicleModel {
+  id          String @id @default(cuid())
+  makeId      String
+  name        String
+  vehicleType String // CAR | VAN | TRUCK | MOTORCYCLE | OTHER
+
+  make             VehicleMake        @relation(fields: [makeId], references: [id])
+  years            VehicleModelYear[]
+  customerVehicles CustomerVehicle[]
+
+  @@unique([makeId, name])
+}
+
+model VehicleModelYear {
+  id      String @id @default(cuid())
+  modelId String
+  year    Int
+
+  model           VehicleModel           @relation(fields: [modelId], references: [id])
+  compatibilities VehicleCompatibility[]
+
+  @@unique([modelId, year])
+}
+
+model VehicleCompatibility {
+  id                 String  @id @default(cuid())
+  companyId          String?
+  vehicleModelYearId String
+  brandId            String?
+  productId          String?
+  minAmperage        Float
+  maxAmperage        Float?
+  recommendedModel   String?
+  notes              String?
+  source             String? // "Moura", "Bosch", "interno", etc.
+
+  company          Company?          @relation(fields: [companyId], references: [id])
+  vehicleModelYear VehicleModelYear  @relation(fields: [vehicleModelYearId], references: [id])
+  brand            Brand?            @relation(fields: [brandId], references: [id])
+  product          Product?          @relation(fields: [productId], references: [id])
+}
+
+// ─────────────────────────────────────────
+// VENDAS
+// ─────────────────────────────────────────
+
+model Sale {
+  id                String   @id @default(cuid())
+  storeId           String
+  customerId        String?
+  customerVehicleId String?
+  userId            String
+  status            String   @default("COMPLETED") // COMPLETED | CANCELLED | RETURNED
+  subtotal          Float
+  discount          Float    @default(0)
+  total             Float
+  estimatedProfit   Float
+  notes             String?
+  receiptSent       Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  store           Store            @relation(fields: [storeId], references: [id])
+  customer        Customer?        @relation(fields: [customerId], references: [id])
+  customerVehicle CustomerVehicle? @relation(fields: [customerVehicleId], references: [id])
+  seller          User             @relation(fields: [userId], references: [id])
+  items           SaleItem[]
+  payments        SalePayment[]
+  installments    Installment[]
+  warranties      Warranty[]
+  stockMovements  StockMovement[]
+}
+
+model SaleItem {
+  id          String @id @default(cuid())
+  saleId      String
+  stockItemId String
+  productId   String
+  quantity    Int    @default(1)
+  unitPrice   Float
+  costPrice   Float
+  discount    Float  @default(0)
+  total       Float
+
+  sale      Sale      @relation(fields: [saleId], references: [id])
+  stockItem StockItem @relation(fields: [stockItemId], references: [id])
+  product   Product   @relation(fields: [productId], references: [id])
+  warranty  Warranty?
+}
+
+model SalePayment {
+  id           String   @id @default(cuid())
+  saleId       String
+  method       String   // CASH | PIX | DEBIT_CARD | CREDIT_CARD | INSTALLMENT_CARD | BANK_SLIP | STORE_CREDIT
+  amount       Float
+  installments Int?
+  notes        String?
+  createdAt    DateTime @default(now())
+
+  sale Sale @relation(fields: [saleId], references: [id])
+}
+
+// ─────────────────────────────────────────
+// CREDIÁRIO
+// ─────────────────────────────────────────
+
+model Installment {
+  id         String    @id @default(cuid())
+  saleId     String
+  customerId String
+  number     Int
+  dueDate    DateTime
+  amount     Float
+  paidAt     DateTime?
+  paidAmount Float?
+  status     String    @default("PENDING") // PENDING | PAID | OVERDUE | CANCELLED
+  notes      String?
+  createdAt  DateTime  @default(now())
+
+  sale     Sale     @relation(fields: [saleId], references: [id])
+  customer Customer @relation(fields: [customerId], references: [id])
+}
+
+// ─────────────────────────────────────────
+// GARANTIAS
+// ─────────────────────────────────────────
+
+model Warranty {
+  id                String    @id @default(cuid())
+  saleId            String
+  saleItemId        String    @unique
+  stockItemId       String
+  customerId        String
+  customerVehicleId String?
+  startDate         DateTime
+  endDate           DateTime
+  status            String    @default("ACTIVE") // ACTIVE | EXPIRED | CLAIMED | REJECTED | REPLACED
+  claimedAt         DateTime?
+  problemReport     String?
+  technicalReport   String?
+  photoUrls         String?   // JSON array
+  approved          Boolean?
+  resolution        String?
+  notes             String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  sale            Sale             @relation(fields: [saleId], references: [id])
+  saleItem        SaleItem         @relation(fields: [saleItemId], references: [id])
+  stockItem       StockItem        @relation(fields: [stockItemId], references: [id])
+  customer        Customer         @relation(fields: [customerId], references: [id])
+  customerVehicle CustomerVehicle? @relation(fields: [customerVehicleId], references: [id])
+  stockMovements  StockMovement[]
+  usedBattery     UsedBattery?
+}
+
+// ─────────────────────────────────────────
+// CASCOS (BATERIAS USADAS)
+// ─────────────────────────────────────────
+
+model UsedBattery {
+  id            String    @id @default(cuid())
+  storeId       String
+  customerId    String?
+  saleId        String?
+  warrantyId    String?   @unique
+  stockItemId   String?
+  discountValue Float?
+  status        String    @default("STORED") // STORED | SENT_TO_SUPPLIER | DISCARDED | SOLD_AS_SCRAP
+  receivedAt    DateTime  @default(now())
+  notes         String?
+
+  store      Store      @relation(fields: [storeId], references: [id])
+  customer   Customer?  @relation(fields: [customerId], references: [id])
+  stockItem  StockItem? @relation(fields: [stockItemId], references: [id])
+  warranty   Warranty?  @relation(fields: [warrantyId], references: [id])
+}
+
+// ─────────────────────────────────────────
+// FINANCEIRO
+// ─────────────────────────────────────────
+
+model FinancialCategory {
+  id        String  @id @default(cuid())
+  companyId String
+  name      String
+  type      String  // INCOME | EXPENSE
+  active    Boolean @default(true)
+
+  company      Company                @relation(fields: [companyId], references: [id])
+  transactions FinancialTransaction[]
+
+  @@unique([companyId, name, type])
+}
+
+model FinancialTransaction {
+  id          String    @id @default(cuid())
+  storeId     String
+  categoryId  String?
+  type        String    // INCOME | EXPENSE
+  description String
+  amount      Float
+  date        DateTime
+  dueDate     DateTime?
+  paidAt      DateTime?
+  saleId      String?
+  supplierId  String?
+  notes       String?
+  createdAt   DateTime  @default(now())
+
+  store    Store              @relation(fields: [storeId], references: [id])
+  category FinancialCategory? @relation(fields: [categoryId], references: [id])
+}
+
+// ─────────────────────────────────────────
+// AUDIT LOG
+// ─────────────────────────────────────────
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  action    String
+  entity    String
+  entityId  String
+  oldValue  String?
+  newValue  String?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
