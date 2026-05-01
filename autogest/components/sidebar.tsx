@@ -46,7 +46,16 @@ const nav: NavItem[] = [
       { label: "Ordens de Compra", href: "/ordens-compra" },
     ],
   },
-  { label: "Financeiro", href: "/financeiro", icon: "◫", disabled: true },
+  {
+    label: "Financeiro",
+    icon: "◫",
+    children: [
+      { label: "Dashboard", href: "/financeiro" },
+      { label: "Lançamentos", href: "/financeiro/transacoes" },
+      { label: "Novo Lançamento", href: "/financeiro/nova" },
+      { label: "Categorias", href: "/financeiro/categorias" },
+    ],
+  },
   { label: "Relatórios", href: "/relatorios", icon: "◩", disabled: true },
 ]
 
