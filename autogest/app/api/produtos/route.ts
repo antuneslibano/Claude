@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
   const vehicleType = searchParams.get("tipo") ?? ""
   const brandId = searchParams.get("marca") ?? ""
   const page = parseInt(searchParams.get("page") ?? "1")
-  const limit = 20
+  const limit = parseInt(searchParams.get("limit") ?? "20")
 
   const where = {
     companyId,

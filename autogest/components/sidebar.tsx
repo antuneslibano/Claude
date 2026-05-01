@@ -19,9 +19,9 @@ const nav = [
     icon: "◫",
     children: [
       { label: "Produtos (Baterias)", href: "/estoque/produtos" },
-      { label: "Estoque por Loja", href: "/estoque/posicao", disabled: true },
-      { label: "Entrada de Estoque", href: "/estoque/entrada", disabled: true },
-      { label: "Saída de Estoque", href: "/estoque/saida", disabled: true },
+      { label: "Estoque por Loja", href: "/estoque/posicao" },
+      { label: "Entrada de Estoque", href: "/estoque/entrada" },
+      { label: "Saída de Estoque", href: "/estoque/saida" },
     ],
   },
   { label: "Vendas", href: "/vendas", icon: "◈", disabled: true },
