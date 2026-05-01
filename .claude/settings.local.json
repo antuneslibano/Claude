@@ -19,7 +19,8 @@
       "PowerShell(Start-Process \"http://localhost:3001\")",
       "PowerShell(Start-Process \"http://localhost:3001/estoque/produtos\")",
       "Bash(npx tsc *)",
-      "PowerShell(cd \"C:\\\\Users\\\\antun\\\\Downloads\\\\Claude\\\\autogest\"; Start-Process powershell -ArgumentList \"-NoExit\", \"-Command\", \"cd 'C:\\\\Users\\\\antun\\\\Downloads\\\\Claude\\\\autogest'; npm run dev\" ; Start-Sleep -Seconds 4; Start-Process \"http://localhost:3000/clientes\")"
+      "PowerShell(cd \"C:\\\\Users\\\\antun\\\\Downloads\\\\Claude\\\\autogest\"; Start-Process powershell -ArgumentList \"-NoExit\", \"-Command\", \"cd 'C:\\\\Users\\\\antun\\\\Downloads\\\\Claude\\\\autogest'; npm run dev\" ; Start-Sleep -Seconds 4; Start-Process \"http://localhost:3000/clientes\")",
+      "PowerShell(netstat -ano)"
     ]
   },
   "hooks": {
