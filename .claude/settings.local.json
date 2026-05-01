@@ -38,7 +38,12 @@
       "PowerShell(New-Item -ItemType Directory -Force -Path \"c:\\\\Users\\\\antun\\\\Downloads\\\\Claude\\\\autogest\\\\app\\\\\\(app\\)\\\\financeiro\\\\categorias\")",
       "Bash(npx prisma *)",
       "Bash(Start-Process -NoNewWindow -FilePath \"npm\" -ArgumentList \"run\", \"dev\" -WorkingDirectory \"c:\\\\Users\\\\antun\\\\Downloads\\\\Claude\\\\autogest\")",
-      "PowerShell(Start-Process -NoNewWindow -FilePath \"cmd.exe\" -ArgumentList \"/c\", \"cd /d C:\\\\Users\\\\antun\\\\Downloads\\\\Claude\\\\autogest && npm run dev\" -WorkingDirectory \"C:\\\\Users\\\\antun\\\\Downloads\\\\Claude\\\\autogest\")"
+      "PowerShell(Start-Process -NoNewWindow -FilePath \"cmd.exe\" -ArgumentList \"/c\", \"cd /d C:\\\\Users\\\\antun\\\\Downloads\\\\Claude\\\\autogest && npm run dev\" -WorkingDirectory \"C:\\\\Users\\\\antun\\\\Downloads\\\\Claude\\\\autogest\")",
+      "Bash(netstat -ano)",
+      "PowerShell(Stop-Process -Id 15584 -Force -ErrorAction SilentlyContinue)",
+      "PowerShell(Get-Process -Name \"node\" -ErrorAction SilentlyContinue)",
+      "PowerShell(Start-Process -FilePath \"cmd.exe\" -ArgumentList \"/c cd /d C:\\\\Users\\\\antun\\\\Downloads\\\\Claude\\\\autogest && npm run dev > C:\\\\Temp\\\\nextjs.log 2>&1\" -WindowStyle Hidden)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/login)"
     ]
   },
   "hooks": {
