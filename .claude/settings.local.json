@@ -24,7 +24,10 @@
       "PowerShell(cd \"C:\\\\Users\\\\antun\\\\Downloads\\\\Claude\\\\autogest\"; $env:TS_NODE_COMPILER_OPTIONS='{\"module\":\"CommonJS\"}'; npx ts-node prisma/seed.ts 2>&1 | Select-Object -Last 20)",
       "PowerShell(Get-Process node -ErrorAction SilentlyContinue)",
       "PowerShell(Stop-Process -Force -ErrorAction SilentlyContinue)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)"
     ]
   },
   "hooks": {
