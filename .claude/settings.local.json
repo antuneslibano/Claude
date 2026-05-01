@@ -27,7 +27,12 @@
       "Bash(npm run *)",
       "Bash(git add *)",
       "Bash(git commit *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(New-Item -ItemType Directory -Path \"c:\\\\Users\\\\antun\\\\Downloads\\\\Claude\\\\autogest\\\\app\\\\\\(app\\)\\\\vendas\" -Force)",
+      "Bash(Out-Null)",
+      "Bash(New-Item -ItemType Directory -Path \"c:\\\\Users\\\\antun\\\\Downloads\\\\Claude\\\\autogest\\\\app\\\\\\(app\\)\\\\vendas\\\\nova\" -Force)",
+      "Bash(New-Item -ItemType Directory -Path \"c:\\\\Users\\\\antun\\\\Downloads\\\\Claude\\\\autogest\\\\app\\\\\\(app\\)\\\\vendas\\\\[id]\" -Force)",
+      "Bash(Write-Output \"dirs created\")"
     ]
   },
   "hooks": {
