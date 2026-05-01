@@ -37,7 +37,7 @@ const nav: NavItem[] = [
   },
   { label: "Clientes", href: "/clientes", icon: "◉" },
   { label: "Garantias", href: "/garantias", icon: "◌" },
-  { label: "Cascos", href: "/cascos", icon: "◎", disabled: true },
+  { label: "Cascos", href: "/cascos", icon: "◎" },
   {
     label: "Fornecedores",
     icon: "◧",
@@ -56,7 +56,7 @@ const nav: NavItem[] = [
       { label: "Categorias", href: "/financeiro/categorias" },
     ],
   },
-  { label: "Relatórios", href: "/relatorios", icon: "◩", disabled: true },
+  { label: "Relatórios", href: "/relatorios", icon: "◩" },
 ]
 
 interface SidebarProps {
