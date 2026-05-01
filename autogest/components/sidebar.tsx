@@ -25,7 +25,7 @@ const nav = [
     ],
   },
   { label: "Vendas", href: "/vendas", icon: "◈", disabled: true },
-  { label: "Clientes", href: "/clientes", icon: "◉", disabled: true },
+  { label: "Clientes", href: "/clientes", icon: "◉" },
   { label: "Garantias", href: "/garantias", icon: "◌", disabled: true },
   { label: "Cascos", href: "/cascos", icon: "◎", disabled: true },
   { label: "Fornecedores", href: "/fornecedores", icon: "◧", disabled: true },

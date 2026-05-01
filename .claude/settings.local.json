@@ -17,7 +17,8 @@
       "PowerShell(winget install --id OpenJS.NodeJS.LTS --silent --accept-package-agreements --accept-source-agreements 2>&1)",
       "PowerShell(Start-Process \"http://localhost:3000\")",
       "PowerShell(Start-Process \"http://localhost:3001\")",
-      "PowerShell(Start-Process \"http://localhost:3001/estoque/produtos\")"
+      "PowerShell(Start-Process \"http://localhost:3001/estoque/produtos\")",
+      "Bash(npx tsc *)"
     ]
   },
   "hooks": {
