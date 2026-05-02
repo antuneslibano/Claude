@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
+import MaskedInput from "@/components/masked-input"
+import { applyCnpj, applyPhone } from "@/lib/masks"
 
 interface Store {
   id: string
@@ -79,8 +81,8 @@ export default function ConfigLojasPage() {
     setEditingId(store.id)
     setForm({
       name: store.name,
-      cnpj: store.cnpj ?? "",
-      phone: store.phone ?? "",
+      cnpj: applyCnpj(store.cnpj),
+      phone: applyPhone(store.phone),
       address: store.address ?? "",
       city: store.city ?? "",
       state: store.state ?? "",
@@ -219,22 +221,20 @@ export default function ConfigLojasPage() {
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">CNPJ</label>
-              <input
-                type="text"
+              <MaskedInput
+                mask="cnpj"
                 value={form.cnpj}
-                onChange={(e) => setField("cnpj", e.target.value)}
+                onChange={(v) => setField("cnpj", v)}
                 placeholder="00.000.000/0000-00"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Telefone</label>
-              <input
-                type="text"
+              <MaskedInput
+                mask="phone"
                 value={form.phone}
-                onChange={(e) => setField("phone", e.target.value)}
+                onChange={(v) => setField("phone", v)}
                 placeholder="(00) 0000-0000"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <div>

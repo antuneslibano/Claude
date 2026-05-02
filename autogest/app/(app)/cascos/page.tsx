@@ -130,7 +130,7 @@ export default function CascosPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-semibold text-gray-900">Cascos</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Baterias usadas recebidas em troca ou devolucao</p>
+          <p className="text-sm text-gray-500 mt-0.5">Baterias usadas recebidas em troca ou devolução</p>
         </div>
         <button
           onClick={() => { setShowForm((v) => !v); setError(""); setSuccess("") }}
@@ -221,7 +221,7 @@ export default function CascosPage() {
                 className="w-24 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               {parseInt(form.quantity) > 1 && (
-                <p className="text-xs text-gray-400 mt-1">Serao criados {form.quantity} registros</p>
+                <p className="text-xs text-gray-400 mt-1">Serão criados {form.quantity} registros</p>
               )}
             </div>
             <div>
@@ -239,15 +239,15 @@ export default function CascosPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Descricao da bateria</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Descrição da bateria</label>
             <input type="text" value={form.description}
               onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
-              placeholder="Ex: 60Ah sem identificacao, corrosao nos terminais..."
+              placeholder="Ex: 60Ah sem identificação, corrosão nos terminais..."
               className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Observacoes</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Observações</label>
             <textarea value={form.notes} onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))} rows={2}
               className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
@@ -290,7 +290,7 @@ export default function CascosPage() {
               <tr className="bg-gray-50 border-b border-gray-200 text-left">
                 <th className="px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Recebido em</th>
                 <th className="px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
-                <th className="px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Produto / Descricao</th>
+                <th className="px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Produto / Descrição</th>
                 <th className="px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Desconto</th>
                 <th className="px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                 <th className="px-4 py-3" />

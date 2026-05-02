@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
+import MaskedInput from "@/components/masked-input"
+import { applyCnpj, applyPhone } from "@/lib/masks"
 
 interface CompanyData {
   name: string
@@ -47,9 +49,9 @@ export default function ConfigEmpresaPage() {
     setData(d)
     setForm({
       name: d.name ?? "",
-      cnpj: d.cnpj ?? "",
+      cnpj: applyCnpj(d.cnpj),
       email: d.email ?? "",
-      phone: d.phone ?? "",
+      phone: applyPhone(d.phone),
       address: d.address ?? "",
     })
     setLoading(false)
@@ -69,9 +71,9 @@ export default function ConfigEmpresaPage() {
     if (data) {
       setForm({
         name: data.name ?? "",
-        cnpj: data.cnpj ?? "",
+        cnpj: applyCnpj(data.cnpj),
         email: data.email ?? "",
-        phone: data.phone ?? "",
+        phone: applyPhone(data.phone),
         address: data.address ?? "",
       })
     }
@@ -162,22 +164,20 @@ export default function ConfigEmpresaPage() {
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">CNPJ</label>
-                <input
-                  type="text"
+                <MaskedInput
+                  mask="cnpj"
                   value={form.cnpj}
-                  onChange={(e) => setForm((p) => ({ ...p, cnpj: e.target.value }))}
+                  onChange={(v) => setForm((p) => ({ ...p, cnpj: v }))}
                   placeholder="00.000.000/0001-00"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Telefone</label>
-                <input
-                  type="text"
+                <MaskedInput
+                  mask="phone"
                   value={form.phone}
-                  onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
+                  onChange={(v) => setForm((p) => ({ ...p, phone: v }))}
                   placeholder="(00) 00000-0000"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div className="col-span-2">

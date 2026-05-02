@@ -56,7 +56,7 @@ const nav: NavItem[] = [
   },
   {
     label: "Financeiro",
-    icon: "◫",
+    icon: "◑",
     children: [
       { label: "Dashboard", href: "/financeiro" },
       { label: "Lançamentos", href: "/financeiro/transacoes" },

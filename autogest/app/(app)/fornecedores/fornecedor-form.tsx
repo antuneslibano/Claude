@@ -2,6 +2,8 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import MaskedInput from "@/components/masked-input"
+import { applyPhone, applyCnpj } from "@/lib/masks"
 
 interface FormData {
   name: string
@@ -28,9 +30,9 @@ export default function FornecedorForm({ initialData, supplierId }: Props) {
 
   const [form, setForm] = useState<FormData>({
     name: initialData?.name ?? "",
-    cnpj: initialData?.cnpj ?? "",
+    cnpj: applyCnpj(initialData?.cnpj),
     contactName: initialData?.contactName ?? "",
-    phone: initialData?.phone ?? "",
+    phone: applyPhone(initialData?.phone),
     email: initialData?.email ?? "",
     address: initialData?.address ?? "",
     paymentTerms: initialData?.paymentTerms ?? "",
@@ -96,12 +98,11 @@ export default function FornecedorForm({ initialData, supplierId }: Props) {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">CNPJ</label>
-            <input
-              type="text"
+            <MaskedInput
+              mask="cnpj"
               value={form.cnpj}
-              onChange={(e) => set("cnpj", e.target.value)}
+              onChange={(v) => set("cnpj", v)}
               placeholder="00.000.000/0000-00"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
           <div>
@@ -119,12 +120,11 @@ export default function FornecedorForm({ initialData, supplierId }: Props) {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Telefone</label>
-            <input
-              type="text"
+            <MaskedInput
+              mask="phone"
               value={form.phone}
-              onChange={(e) => set("phone", e.target.value)}
+              onChange={(v) => set("phone", v)}
               placeholder="(00) 00000-0000"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
           <div>

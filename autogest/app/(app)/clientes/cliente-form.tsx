@@ -2,6 +2,8 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import MaskedInput from "@/components/masked-input"
+import { applyPhone, applyCpfCnpj } from "@/lib/masks"
 
 const TIPOS = [
   { value: "INDIVIDUAL", label: "Pessoa Física" },
@@ -41,9 +43,9 @@ export default function ClienteForm({ initialData }: ClienteFormProps) {
 
   const [form, setForm] = useState({
     name: initialData?.name ?? "",
-    cpfCnpj: initialData?.cpfCnpj ?? "",
-    phone: initialData?.phone ?? "",
-    whatsapp: initialData?.whatsapp ?? "",
+    cpfCnpj: applyCpfCnpj(initialData?.cpfCnpj),
+    phone: applyPhone(initialData?.phone),
+    whatsapp: applyPhone(initialData?.whatsapp),
     email: initialData?.email ?? "",
     address: initialData?.address ?? "",
     city: initialData?.city ?? "",
@@ -138,11 +140,10 @@ export default function ClienteForm({ initialData }: ClienteFormProps) {
 
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">CPF / CNPJ</label>
-              <input
-                type="text"
+              <MaskedInput
+                mask="cpfcnpj"
                 value={form.cpfCnpj}
-                onChange={(e) => set("cpfCnpj", e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                onChange={(v) => set("cpfCnpj", v)}
                 placeholder="000.000.000-00 ou 00.000.000/0001-00"
               />
             </div>
@@ -156,22 +157,20 @@ export default function ClienteForm({ initialData }: ClienteFormProps) {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Telefone</label>
-              <input
-                type="text"
+              <MaskedInput
+                mask="phone"
                 value={form.phone}
-                onChange={(e) => set("phone", e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                onChange={(v) => set("phone", v)}
                 placeholder="(00) 0000-0000"
               />
             </div>
 
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">WhatsApp</label>
-              <input
-                type="text"
+              <MaskedInput
+                mask="phone"
                 value={form.whatsapp}
-                onChange={(e) => set("whatsapp", e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                onChange={(v) => set("whatsapp", v)}
                 placeholder="(00) 00000-0000"
               />
             </div>
