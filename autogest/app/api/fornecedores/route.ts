@@ -38,9 +38,12 @@ export async function POST(req: NextRequest) {
 
   const companyId = (session.user as any).companyId
   const body = await req.json()
-  const { name, cnpj, contactName, phone, email, address, paymentTerms, avgDeliveryDays, notes } = body
+  const { name, cnpj, contactName, phone, email, address, paymentTerms, avgDeliveryDays, notes, cascoReturnMode, cascoWeightKg } = body
 
   if (!name?.trim()) return NextResponse.json({ error: "Nome é obrigatório" }, { status: 400 })
+
+  const validModes = ["NONE", "UNIT", "WEIGHT"]
+  const mode = cascoReturnMode && validModes.includes(cascoReturnMode) ? cascoReturnMode : "NONE"
 
   const supplier = await prisma.supplier.create({
     data: {
@@ -54,6 +57,8 @@ export async function POST(req: NextRequest) {
       paymentTerms: paymentTerms?.trim() || null,
       avgDeliveryDays: avgDeliveryDays ? parseInt(avgDeliveryDays) : null,
       notes: notes?.trim() || null,
+      cascoReturnMode: mode,
+      cascoWeightKg: cascoWeightKg ? parseFloat(cascoWeightKg) : null,
     },
   })
 

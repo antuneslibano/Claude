@@ -4,12 +4,14 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 
 interface Store { id: string; name: string }
-interface Product { id: string; brand: string; model: string; amperage: number; costPrice: number }
+interface Product { id: string; brand: string; model: string; amperage: number; costPrice: number; weight: number | null }
+interface Supplier { id: string; name: string; cascoReturnMode: string; cascoWeightKg: number | null }
 
 export default function EntradaEstoquePage() {
   const router = useRouter()
   const [stores, setStores] = useState<Store[]>([])
   const [products, setProducts] = useState<Product[]>([])
+  const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState("")
   const [error, setError] = useState("")
@@ -17,14 +19,11 @@ export default function EntradaEstoquePage() {
   const [form, setForm] = useState({
     storeId: "",
     productId: "",
+    supplierId: "",
     quantity: "1",
     costPrice: "",
     batchNumber: "",
     notes: "",
-    hasCascoRequirement: "false",
-    cascoMode: "UNIT",
-    cascosRequired: "",
-    cascoWeightKg: "",
   })
 
   useEffect(() => {
@@ -40,6 +39,17 @@ export default function EntradaEstoquePage() {
           model: p.model,
           amperage: p.amperage,
           costPrice: p.costPrice,
+          weight: p.weight ?? null,
+        }))
+      )
+    })
+    fetch("/api/fornecedores?active=true").then((r) => r.json()).then((data) => {
+      setSuppliers(
+        (Array.isArray(data) ? data : []).map((s: any) => ({
+          id: s.id,
+          name: s.name,
+          cascoReturnMode: s.cascoReturnMode ?? "NONE",
+          cascoWeightKg: s.cascoWeightKg ?? null,
         }))
       )
     })
@@ -58,25 +68,35 @@ export default function EntradaEstoquePage() {
     }))
   }
 
+  const selectedProduct = products.find((p) => p.id === form.productId)
+  const selectedSupplier = suppliers.find((s) => s.id === form.supplierId)
+  const qty = parseInt(form.quantity) || 0
+
+  // Cálculo automático de cascos com base no fornecedor
+  const cascoInfo = (() => {
+    if (!selectedSupplier || selectedSupplier.cascoReturnMode === "NONE") return null
+    if (selectedSupplier.cascoReturnMode === "UNIT") {
+      return { label: "Cascos a devolver", value: `${qty} unidade${qty !== 1 ? "s" : ""}` }
+    }
+    if (selectedSupplier.cascoReturnMode === "WEIGHT") {
+      const unitWeight = selectedSupplier.cascoWeightKg ?? selectedProduct?.weight ?? null
+      if (unitWeight && qty > 0) {
+        return { label: "Peso a devolver", value: `${(qty * unitWeight).toFixed(1)} kg (${unitWeight} kg × ${qty})` }
+      }
+      return { label: "Peso a devolver", value: "Configure o peso médio no cadastro do fornecedor" }
+    }
+    return null
+  })()
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError("")
     setSuccess("")
     if (!form.storeId || !form.productId || !form.quantity || !form.costPrice) {
-      setError("Preencha todos os campos obrigatorios.")
+      setError("Preencha todos os campos obrigatórios.")
       return
     }
     setLoading(true)
-
-    // Monta observacao com info de cascos se necessario
-    let notesValue = form.notes || null
-    if (form.hasCascoRequirement === "true") {
-      const cascoInfo =
-        form.cascoMode === "UNIT"
-          ? `Devolucao de cascos: ${form.cascosRequired || "?"} unidades`
-          : `Devolucao de cascos: ${form.cascoWeightKg || "?"} kg`
-      notesValue = notesValue ? `${notesValue} | ${cascoInfo}` : cascoInfo
-    }
 
     const res = await fetch("/api/estoque/entrada", {
       method: "POST",
@@ -84,10 +104,11 @@ export default function EntradaEstoquePage() {
       body: JSON.stringify({
         storeId: form.storeId,
         productId: form.productId,
+        supplierId: form.supplierId || null,
         quantity: parseInt(form.quantity),
         costPrice: parseFloat(form.costPrice),
         batchNumber: form.batchNumber || null,
-        notes: notesValue,
+        notes: form.notes || null,
       }),
     })
     const data = await res.json()
@@ -97,21 +118,16 @@ export default function EntradaEstoquePage() {
       setForm((p) => ({
         ...p,
         productId: "",
+        supplierId: "",
         quantity: "1",
         costPrice: "",
         batchNumber: "",
         notes: "",
-        hasCascoRequirement: "false",
-        cascoMode: "UNIT",
-        cascosRequired: "",
-        cascoWeightKg: "",
       }))
     } else {
       setError(data.error ?? "Erro ao registrar entrada")
     }
   }
-
-  const selectedProduct = products.find((p) => p.id === form.productId)
 
   return (
     <div className="p-6 max-w-xl">
@@ -137,6 +153,20 @@ export default function EntradaEstoquePage() {
               </select>
             </div>
           )}
+
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Fornecedor</label>
+            <select
+              value={form.supplierId}
+              onChange={(e) => set("supplierId", e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Sem fornecedor vinculado</option>
+              {suppliers.map((s) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+          </div>
 
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Produto *</label>
@@ -169,7 +199,7 @@ export default function EntradaEstoquePage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Custo unitario (R$) *</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Custo unitário (R$) *</label>
               <input
                 type="number"
                 step="0.01"
@@ -184,7 +214,7 @@ export default function EntradaEstoquePage() {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Numero do Lote</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Número do Lote</label>
             <input
               type="text"
               value={form.batchNumber}
@@ -195,89 +225,40 @@ export default function EntradaEstoquePage() {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Observacoes</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Observações</label>
             <textarea
               value={form.notes}
               onChange={(e) => set("notes", e.target.value)}
               rows={2}
-              placeholder="Nota fiscal, fornecedor, etc..."
+              placeholder="Nota fiscal, etc..."
               className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
             />
           </div>
         </div>
 
-        {/* Secao de cascos */}
-        <div className="bg-white border border-gray-200 rounded-lg p-5 space-y-4">
-          <div className="flex items-center justify-between border-b border-gray-100 pb-2">
-            <h2 className="text-sm font-semibold text-gray-700">Devolucao de Cascos</h2>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={form.hasCascoRequirement === "true"}
-                onChange={(e) => set("hasCascoRequirement", e.target.checked ? "true" : "false")}
-                className="w-4 h-4 rounded border-gray-300 text-blue-600"
-              />
-              <span className="text-xs text-gray-600">Exige devolucao de cascos</span>
-            </label>
+        {/* Devolução de cascos — calculada automaticamente pelo fornecedor */}
+        {cascoInfo ? (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+            <p className="text-xs font-semibold text-amber-800 mb-1">Devolução de Cascos</p>
+            <p className="text-sm text-amber-900">
+              <span className="font-medium">{cascoInfo.label}:</span> {cascoInfo.value}
+            </p>
+            <p className="text-xs text-amber-600 mt-1">
+              Regra configurada no cadastro do fornecedor <strong>{selectedSupplier?.name}</strong>.
+            </p>
           </div>
-
-          {form.hasCascoRequirement === "true" && (
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Modo de cobranca</label>
-                <div className="flex gap-3">
-                  {[{ v: "UNIT", l: "Por unidade" }, { v: "WEIGHT", l: "Por peso (kg)" }].map((opt) => (
-                    <label key={opt.v} className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="cascoMode"
-                        value={opt.v}
-                        checked={form.cascoMode === opt.v}
-                        onChange={() => set("cascoMode", opt.v)}
-                        className="text-blue-600"
-                      />
-                      <span className="text-sm text-gray-700">{opt.l}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {form.cascoMode === "UNIT" && (
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Quantidade de cascos a devolver</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={form.cascosRequired}
-                    onChange={(e) => set("cascosRequired", e.target.value)}
-                    placeholder="Ex: 10"
-                    className="w-32 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              )}
-
-              {form.cascoMode === "WEIGHT" && (
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Peso de cascos a devolver (kg)</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    value={form.cascoWeightKg}
-                    onChange={(e) => set("cascoWeightKg", e.target.value)}
-                    placeholder="Ex: 50.5"
-                    className="w-32 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+        ) : selectedSupplier && selectedSupplier.cascoReturnMode === "NONE" ? (
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <p className="text-xs text-gray-500">
+              O fornecedor <strong>{selectedSupplier.name}</strong> não exige devolução de cascos.
+            </p>
+          </div>
+        ) : null}
 
         {form.productId && form.quantity && form.costPrice && (
           <div className="bg-blue-50 border border-blue-200 rounded-md px-4 py-3 text-sm text-blue-700">
-            Total estimado: <strong>R$ {(parseInt(form.quantity || "0") * parseFloat(form.costPrice || "0")).toFixed(2)}</strong>
-            {" "}({form.quantity} x R$ {parseFloat(form.costPrice || "0").toFixed(2)})
+            Total estimado: <strong>R$ {(qty * parseFloat(form.costPrice || "0")).toFixed(2)}</strong>
+            {" "}({form.quantity} × R$ {parseFloat(form.costPrice || "0").toFixed(2)})
           </div>
         )}
 
@@ -297,7 +278,7 @@ export default function EntradaEstoquePage() {
             onClick={() => router.push("/estoque/posicao")}
             className="px-5 py-2 border border-gray-300 rounded-md text-sm text-gray-600 hover:bg-gray-50 transition-colors"
           >
-            Ver Posicao
+            Ver Posição
           </button>
         </div>
       </form>

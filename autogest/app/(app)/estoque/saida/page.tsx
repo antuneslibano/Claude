@@ -11,11 +11,13 @@ const REASONS = [
 
 interface Store { id: string; name: string }
 interface Product { id: string; brand: string; model: string; amperage: number; available: number }
+interface Supplier { id: string; name: string }
 
 export default function SaidaEstoquePage() {
   const [stores, setStores] = useState<Store[]>([])
   const [storeId, setStoreId] = useState("")
   const [products, setProducts] = useState<Product[]>([])
+  const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState("")
   const [error, setError] = useState("")
@@ -24,6 +26,7 @@ export default function SaidaEstoquePage() {
     productId: "",
     quantity: "1",
     reason: "LOSS",
+    supplierId: "",
     notes: "",
   })
 
@@ -31,6 +34,9 @@ export default function SaidaEstoquePage() {
     fetch("/api/lojas").then((r) => r.json()).then((data) => {
       setStores(data)
       if (data.length > 0) setStoreId(data[0].id)
+    })
+    fetch("/api/fornecedores?active=true").then((r) => r.json()).then((data) => {
+      setSuppliers(Array.isArray(data) ? data.map((s: any) => ({ id: s.id, name: s.name })) : [])
     })
   }, [])
 
@@ -74,6 +80,7 @@ export default function SaidaEstoquePage() {
         productId: form.productId,
         quantity: parseInt(form.quantity),
         reason: form.reason,
+        supplierId: form.supplierId || null,
         notes: form.notes || null,
       }),
     })
@@ -81,8 +88,7 @@ export default function SaidaEstoquePage() {
     setLoading(false)
     if (res.ok) {
       setSuccess(`${data.count} unidade(s) baixada(s) do estoque.`)
-      setForm((p) => ({ ...p, productId: "", quantity: "1", notes: "" }))
-      // Refresh products list
+      setForm((p) => ({ ...p, productId: "", quantity: "1", supplierId: "", notes: "" }))
       fetch(`/api/estoque/posicao?storeId=${storeId}`)
         .then((r) => r.json())
         .then((d) =>
@@ -164,7 +170,7 @@ export default function SaidaEstoquePage() {
               <label className="block text-xs font-medium text-gray-600 mb-1">Motivo *</label>
               <select
                 value={form.reason}
-                onChange={(e) => set("reason", e.target.value)}
+                onChange={(e) => { set("reason", e.target.value); if (e.target.value !== "RETURN") set("supplierId", "") }}
                 required
                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
@@ -172,6 +178,22 @@ export default function SaidaEstoquePage() {
               </select>
             </div>
           </div>
+
+          {form.reason === "RETURN" && (
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Fornecedor</label>
+              <select
+                value={form.supplierId}
+                onChange={(e) => set("supplierId", e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Selecionar fornecedor...</option>
+                {suppliers.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Observações</label>

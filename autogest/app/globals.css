@@ -1,3 +1,19 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@media print {
+  .no-print { display: none !important; }
+
+  body { background: white !important; }
+
+  /* Permite que o conteúdo principal ocupe toda a largura */
+  main {
+    overflow: visible !important;
+    height: auto !important;
+    width: 100% !important;
+  }
+
+  /* Garante cores e fundos na impressão */
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}

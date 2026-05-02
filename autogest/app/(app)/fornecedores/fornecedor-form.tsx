@@ -13,6 +13,8 @@ interface FormData {
   paymentTerms: string
   avgDeliveryDays: string
   notes: string
+  cascoReturnMode: "NONE" | "UNIT" | "WEIGHT"
+  cascoWeightKg: string
 }
 
 interface Props {
@@ -34,6 +36,8 @@ export default function FornecedorForm({ initialData, supplierId }: Props) {
     paymentTerms: initialData?.paymentTerms ?? "",
     avgDeliveryDays: initialData?.avgDeliveryDays ?? "",
     notes: initialData?.notes ?? "",
+    cascoReturnMode: initialData?.cascoReturnMode ?? "NONE",
+    cascoWeightKg: initialData?.cascoWeightKg ?? "",
   })
 
   const [loading, setLoading] = useState(false)
@@ -58,6 +62,7 @@ export default function FornecedorForm({ initialData, supplierId }: Props) {
       body: JSON.stringify({
         ...form,
         avgDeliveryDays: form.avgDeliveryDays ? parseInt(form.avgDeliveryDays) : null,
+        cascoWeightKg: form.cascoWeightKg ? parseFloat(form.cascoWeightKg) : null,
       }),
     })
     const data = await res.json()
@@ -183,6 +188,69 @@ export default function FornecedorForm({ initialData, supplierId }: Props) {
             className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
+      </div>
+
+      {/* Política de Cascos */}
+      <div className="bg-white border border-gray-200 rounded-lg p-5 space-y-4">
+        <div>
+          <h2 className="text-sm font-semibold text-gray-700 border-b border-gray-100 pb-2">Política de Cascos</h2>
+          <p className="text-xs text-gray-500 mt-2">
+            Define como este fornecedor exige a devolução de cascos (baterias usadas) ao realizar novas compras.
+          </p>
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-2">Modo de devolução</label>
+          <div className="space-y-2">
+            {[
+              { v: "NONE", l: "Não exige devolução", desc: "Este fornecedor não cobra cascos." },
+              { v: "UNIT", l: "Por unidade", desc: "Cobra 1 casco por bateria comprada (mesma quantidade)." },
+              { v: "WEIGHT", l: "Por peso (kg)", desc: "Cobra pelo peso equivalente. Informe o peso médio por unidade abaixo." },
+            ].map((opt) => (
+              <label
+                key={opt.v}
+                className={`flex items-start gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${
+                  form.cascoReturnMode === opt.v
+                    ? "border-blue-400 bg-blue-50"
+                    : "border-gray-200 hover:border-gray-300"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="cascoReturnMode"
+                  value={opt.v}
+                  checked={form.cascoReturnMode === opt.v}
+                  onChange={() => set("cascoReturnMode", opt.v as any)}
+                  className="mt-0.5 text-blue-600"
+                />
+                <div>
+                  <p className="text-sm font-medium text-gray-900">{opt.l}</p>
+                  <p className="text-xs text-gray-500">{opt.desc}</p>
+                </div>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {form.cascoReturnMode === "WEIGHT" && (
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">
+              Peso médio por unidade (kg)
+            </label>
+            <input
+              type="number"
+              step="0.1"
+              min="0"
+              value={form.cascoWeightKg}
+              onChange={(e) => set("cascoWeightKg", e.target.value)}
+              placeholder="Ex: 14.0"
+              className="w-36 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              Usado para calcular automaticamente o peso a devolver na entrada de estoque.
+            </p>
+          </div>
+        )}
       </div>
 
       {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">{error}</p>}

@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
   const userId = (session.user as any).id
   const companyId = (session.user as any).companyId
 
-  const { productId, storeId, quantity, reason, notes } = await req.json()
+  const { productId, storeId, quantity, reason, notes, supplierId } = await req.json()
 
   if (!productId || !storeId || !quantity || !reason) {
     return NextResponse.json({ error: "Campos obrigatórios ausentes" }, { status: 400 })
@@ -53,6 +53,7 @@ export async function POST(req: NextRequest) {
           userId,
           type: reason,
           reason: notes || reason,
+          ...(supplierId && { supplierId }),
         },
       })
     }

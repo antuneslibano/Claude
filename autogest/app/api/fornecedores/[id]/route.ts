@@ -35,6 +35,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const supplier = await prisma.supplier.findFirst({ where: { id: params.id, companyId } })
   if (!supplier) return NextResponse.json({ error: "Fornecedor não encontrado" }, { status: 404 })
 
+  const validModes = ["NONE", "UNIT", "WEIGHT"]
   const updated = await prisma.supplier.update({
     where: { id: params.id },
     data: {
@@ -48,6 +49,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       avgDeliveryDays: body.avgDeliveryDays != null ? parseInt(body.avgDeliveryDays) : null,
       notes: body.notes?.trim() || null,
       active: body.active ?? supplier.active,
+      ...(body.cascoReturnMode !== undefined && validModes.includes(body.cascoReturnMode) && { cascoReturnMode: body.cascoReturnMode }),
+      cascoWeightKg: body.cascoWeightKg != null ? parseFloat(body.cascoWeightKg) : null,
     },
   })
 
