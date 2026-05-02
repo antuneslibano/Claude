@@ -23,6 +23,9 @@ model Company {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  cascoReturnMode      String  @default("UNIT")  // UNIT | WEIGHT
+  maxStores            Int     @default(3)
+
   stores               Store[]
   users                User[]
   brands               Brand[]
@@ -212,23 +215,28 @@ model Supplier {
   company        Company         @relation(fields: [companyId], references: [id])
   purchaseOrders PurchaseOrder[]
   stockItems     StockItem[]
+  usedBatteries  UsedBattery[]
 }
 
 model PurchaseOrder {
-  id            String   @id @default(cuid())
-  storeId       String
-  supplierId    String
-  invoiceNumber String?
-  invoiceUrl    String?
-  purchaseDate  DateTime
-  totalCost     Float
-  notes         String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id              String   @id @default(cuid())
+  storeId         String
+  supplierId      String
+  invoiceNumber   String?
+  invoiceUrl      String?
+  purchaseDate    DateTime
+  totalCost       Float
+  cascoMode       String?  // UNIT | WEIGHT | NONE
+  cascosRequired  Int?
+  cascoWeightKg   Float?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  store      Store       @relation(fields: [storeId], references: [id])
-  supplier   Supplier    @relation(fields: [supplierId], references: [id])
-  items      StockItem[]
+  store         Store         @relation(fields: [storeId], references: [id])
+  supplier      Supplier      @relation(fields: [supplierId], references: [id])
+  items         StockItem[]
+  usedBatteries UsedBattery[]
 }
 
 // ─────────────────────────────────────────
@@ -452,21 +460,28 @@ model Warranty {
 // ─────────────────────────────────────────
 
 model UsedBattery {
-  id            String    @id @default(cuid())
-  storeId       String
-  customerId    String?
-  saleId        String?
-  warrantyId    String?   @unique
-  stockItemId   String?
-  discountValue Float?
-  status        String    @default("STORED") // STORED | SENT_TO_SUPPLIER | DISCARDED | SOLD_AS_SCRAP
-  receivedAt    DateTime  @default(now())
-  notes         String?
+  id              String    @id @default(cuid())
+  storeId         String
+  customerId      String?
+  saleId          String?
+  warrantyId      String?   @unique
+  stockItemId     String?
+  supplierId      String?
+  purchaseOrderId String?
+  discountValue   Float?
+  weightKg        Float?
+  quantity        Int       @default(1)
+  status          String    @default("STORED") // STORED | SENT_TO_SUPPLIER | DISCARDED | SOLD_AS_SCRAP
+  receivedAt      DateTime  @default(now())
+  sentAt          DateTime?
+  notes           String?
 
-  store      Store      @relation(fields: [storeId], references: [id])
-  customer   Customer?  @relation(fields: [customerId], references: [id])
-  stockItem  StockItem? @relation(fields: [stockItemId], references: [id])
-  warranty   Warranty?  @relation(fields: [warrantyId], references: [id])
+  store         Store          @relation(fields: [storeId], references: [id])
+  customer      Customer?      @relation(fields: [customerId], references: [id])
+  stockItem     StockItem?     @relation(fields: [stockItemId], references: [id])
+  warranty      Warranty?      @relation(fields: [warrantyId], references: [id])
+  supplier      Supplier?      @relation(fields: [supplierId], references: [id])
+  purchaseOrder PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id])
 }
 
 // ─────────────────────────────────────────

@@ -45,23 +45,45 @@ export async function POST(req: NextRequest) {
 
   const companyId = (session.user as any).companyId
   const body = await req.json()
-  const { storeId, customerId, saleId, discountValue, notes, description } = body
+  const { storeId, customerId, saleId, discountValue, notes, description, quantity, weightKg } = body
 
   if (!storeId) return NextResponse.json({ error: "storeId é obrigatório" }, { status: 400 })
 
   const store = await prisma.store.findFirst({ where: { id: storeId, companyId } })
   if (!store) return NextResponse.json({ error: "Loja não encontrada" }, { status: 404 })
 
-  const item = await prisma.usedBattery.create({
-    data: {
+  const qty = Math.max(1, parseInt(quantity) || 1)
+  const combinedNotes = [description, notes].filter(Boolean).join(" — ") || null
+
+  if (qty === 1) {
+    const item = await prisma.usedBattery.create({
+      data: {
+        storeId,
+        customerId: customerId || null,
+        saleId: saleId || null,
+        discountValue: discountValue ? parseFloat(discountValue) : null,
+        weightKg: weightKg ? parseFloat(weightKg) : null,
+        quantity: 1,
+        notes: combinedNotes,
+        status: "STORED",
+      },
+    })
+    return NextResponse.json(item, { status: 201 })
+  }
+
+  // Lote: cria múltiplos registros
+  await prisma.usedBattery.createMany({
+    data: Array.from({ length: qty }, () => ({
       storeId,
       customerId: customerId || null,
       saleId: saleId || null,
       discountValue: discountValue ? parseFloat(discountValue) : null,
-      notes: [description, notes].filter(Boolean).join(" — ") || null,
+      weightKg: weightKg ? parseFloat((parseFloat(weightKg) / qty).toFixed(3)) : null,
+      quantity: 1,
+      notes: combinedNotes,
       status: "STORED",
-    },
+    })),
   })
 
-  return NextResponse.json(item, { status: 201 })
+  return NextResponse.json({ count: qty }, { status: 201 })
 }

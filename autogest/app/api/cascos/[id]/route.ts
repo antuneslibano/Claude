@@ -21,12 +21,16 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     return NextResponse.json({ error: "Status inválido" }, { status: 400 })
   }
 
+  const { supplierId } = body
+
   const updated = await prisma.usedBattery.update({
     where: { id: params.id },
     data: {
       status: status ?? item.status,
       notes: notes !== undefined ? (notes?.trim() || null) : item.notes,
       discountValue: discountValue !== undefined ? (discountValue ? parseFloat(discountValue) : null) : item.discountValue,
+      supplierId: supplierId !== undefined ? (supplierId || null) : item.supplierId,
+      sentAt: status === "SENT_TO_SUPPLIER" && item.status !== "SENT_TO_SUPPLIER" ? new Date() : item.sentAt,
     },
   })
 
