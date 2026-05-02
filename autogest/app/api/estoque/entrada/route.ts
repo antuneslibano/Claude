@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
   const userId = (session.user as any).id
   const companyId = (session.user as any).companyId
 
-  const { productId, storeId, quantity, costPrice, supplierId, batchNumber, notes, cascos } =
+  const { productId, storeId, quantity, costPrice, supplierId, batchNumber, notes, cascos, purchaseOrderId } =
     await req.json()
 
   if (!productId || !storeId || !quantity || !costPrice) {
@@ -25,6 +25,12 @@ export async function POST(req: NextRequest) {
   const product = await prisma.product.findFirst({ where: { id: productId, companyId } })
   if (!product) return NextResponse.json({ error: "Produto inválido" }, { status: 400 })
 
+  // If PO is provided, validate it belongs to this company
+  if (purchaseOrderId) {
+    const po = await prisma.purchaseOrder.findFirst({ where: { id: purchaseOrderId, store: { companyId } } })
+    if (!po) return NextResponse.json({ error: "Ordem de compra não encontrada" }, { status: 404 })
+  }
+
   const items = await prisma.$transaction(async (tx) => {
     const created = []
     for (let i = 0; i < quantity; i++) {
@@ -37,6 +43,7 @@ export async function POST(req: NextRequest) {
           ...(supplierId && { supplierId }),
           ...(batchNumber && { batchNumber }),
           ...(notes && { notes }),
+          ...(purchaseOrderId && { purchaseOrderId }),
         },
       })
       await tx.stockMovement.create({
@@ -52,7 +59,15 @@ export async function POST(req: NextRequest) {
       created.push(item)
     }
 
-    // Registra cascos enviados ao fornecedor (agrupados por amperagem)
+    // Mark PO as delivered
+    if (purchaseOrderId) {
+      await tx.purchaseOrder.update({
+        where: { id: purchaseOrderId },
+        data: { status: "DELIVERED", deliveredAt: new Date() },
+      })
+    }
+
+    // Registra cascos enviados ao fornecedor
     if (Array.isArray(cascos) && cascos.length > 0) {
       for (const c of cascos) {
         const qty = parseInt(c.quantity) || 0
@@ -65,6 +80,7 @@ export async function POST(req: NextRequest) {
             quantity: qty,
             weightKg: c.weightKg ? parseFloat(c.weightKg) : null,
             status: "SENT_TO_SUPPLIER",
+            sentAt: new Date(),
             notes: `Enviado com entrada de estoque`,
           },
         })

@@ -10,6 +10,8 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const storeId = searchParams.get("storeId") ?? undefined
   const supplierId = searchParams.get("supplierId") ?? undefined
+  const status = searchParams.get("status") ?? undefined
+  const type = searchParams.get("type") ?? undefined
   const page = parseInt(searchParams.get("page") ?? "1")
   const limit = parseInt(searchParams.get("limit") ?? "20")
 
@@ -17,6 +19,8 @@ export async function GET(req: NextRequest) {
     store: { companyId },
     ...(storeId && { storeId }),
     ...(supplierId && { supplierId }),
+    ...(status && { status }),
+    ...(type && { type }),
   }
 
   const [total, orders] = await Promise.all([
@@ -26,7 +30,7 @@ export async function GET(req: NextRequest) {
       include: {
         store: { select: { name: true } },
         supplier: { select: { name: true } },
-        _count: { select: { items: true } },
+        _count: { select: { orderItems: true, items: true } },
       },
       orderBy: { purchaseDate: "desc" },
       skip: (page - 1) * limit,
@@ -43,7 +47,12 @@ export async function POST(req: NextRequest) {
 
   const companyId = (session.user as any).companyId
   const body = await req.json()
-  const { storeId, supplierId, invoiceNumber, purchaseDate, items, notes } = body
+  const {
+    storeId, supplierId, invoiceNumber, purchaseDate,
+    type, paymentType, expectedDeliveryDate, paidAt,
+    cascoMode, cascosRequired, cascoWeightKg,
+    items, notes,
+  } = body
 
   if (!storeId || !supplierId || !purchaseDate || !items?.length) {
     return NextResponse.json({ error: "storeId, supplierId, purchaseDate e items são obrigatórios" }, { status: 400 })
@@ -55,7 +64,7 @@ export async function POST(req: NextRequest) {
   const supplier = await prisma.supplier.findFirst({ where: { id: supplierId, companyId } })
   if (!supplier) return NextResponse.json({ error: "Fornecedor não encontrado" }, { status: 404 })
 
-  const totalCost = items.reduce((acc: number, i: any) => acc + i.costPrice * i.quantity, 0)
+  const totalCost = items.reduce((acc: number, i: any) => acc + (i.unitCost ?? i.costPrice ?? 0) * i.quantity, 0)
 
   const order = await prisma.$transaction(async (tx) => {
     const po = await tx.purchaseOrder.create({
@@ -65,27 +74,28 @@ export async function POST(req: NextRequest) {
         invoiceNumber: invoiceNumber?.trim() || null,
         purchaseDate: new Date(purchaseDate),
         totalCost,
+        type: type ?? "IMMEDIATE",
+        paymentType: paymentType ?? "CASH",
+        status: "ORDERED",
+        expectedDeliveryDate: expectedDeliveryDate ? new Date(expectedDeliveryDate) : null,
+        paidAt: paidAt ? new Date(paidAt) : null,
+        cascoMode: cascoMode || null,
+        cascosRequired: cascosRequired ? parseInt(cascosRequired) : null,
+        cascoWeightKg: cascoWeightKg ? parseFloat(cascoWeightKg) : null,
         notes: notes?.trim() || null,
       },
     })
 
-    // Criar itens de estoque (uma unidade por registro)
     for (const item of items) {
-      const { productId, quantity, costPrice, batchNumber, serialNumbers } = item
-
-      const stockItemData = Array.from({ length: quantity }, (_: unknown, i: number) => ({
-        storeId,
-        productId,
-        supplierId,
-        purchaseOrderId: po.id,
-        costPrice: parseFloat(costPrice),
-        batchNumber: batchNumber?.trim() || null,
-        serialNumber: serialNumbers?.[i]?.trim() || null,
-        entryDate: new Date(purchaseDate),
-        status: "AVAILABLE",
-      }))
-
-      await tx.stockItem.createMany({ data: stockItemData })
+      await tx.purchaseOrderItem.create({
+        data: {
+          purchaseOrderId: po.id,
+          productId: item.productId,
+          quantity: item.quantity,
+          unitCost: parseFloat(item.unitCost ?? item.costPrice ?? 0),
+          batchNumber: item.batchNumber?.trim() || null,
+        },
+      })
     }
 
     return po

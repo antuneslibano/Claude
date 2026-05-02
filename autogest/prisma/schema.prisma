@@ -136,6 +136,7 @@ model Product {
   stockItems             StockItem[]
   saleItems              SaleItem[]
   vehicleCompatibilities VehicleCompatibility[]
+  purchaseOrderItems     PurchaseOrderItem[]
 
   @@unique([companyId, internalCode])
 }
@@ -233,15 +234,34 @@ model PurchaseOrder {
   totalCost       Float
   cascoMode       String?  // UNIT | WEIGHT | NONE
   cascosRequired  Int?
-  cascoWeightKg   Float?
-  notes           String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  cascoWeightKg        Float?
+  type                 String    @default("IMMEDIATE")   // IMMEDIATE | PROGRAMMED
+  paymentType          String    @default("CASH")        // CASH | CASCO_EXCHANGE
+  status               String    @default("DELIVERED")   // ORDERED | DELIVERED | CANCELLED
+  expectedDeliveryDate DateTime?
+  deliveredAt          DateTime?
+  paidAt               DateTime?
+  notes                String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
-  store         Store         @relation(fields: [storeId], references: [id])
-  supplier      Supplier      @relation(fields: [supplierId], references: [id])
+  store         Store               @relation(fields: [storeId], references: [id])
+  supplier      Supplier            @relation(fields: [supplierId], references: [id])
   items         StockItem[]
   usedBatteries UsedBattery[]
+  orderItems    PurchaseOrderItem[]
+}
+
+model PurchaseOrderItem {
+  id              String  @id @default(cuid())
+  purchaseOrderId String
+  productId       String
+  quantity        Int
+  unitCost        Float
+  batchNumber     String?
+
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
+  product       Product       @relation(fields: [productId], references: [id])
 }
 
 // ─────────────────────────────────────────
