@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState, useCallback, useRef } from "react"
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -45,6 +45,8 @@ export default function RelatoriosPage() {
   const [from, setFrom] = useState(defaultFrom)
   const [to, setTo] = useState(defaultTo)
   const [loading, setLoading] = useState(false)
+  const [generatingPdf, setGeneratingPdf] = useState(false)
+  const printAreaRef = useRef<HTMLDivElement>(null)
 
   const [dre, setDre] = useState<DRE | null>(null)
   const [products, setProducts] = useState<ProductRanking[]>([])
@@ -273,6 +275,51 @@ export default function RelatoriosPage() {
     window.print()
   }
 
+  async function handleDownloadPDF() {
+    if (!printAreaRef.current) return
+    setGeneratingPdf(true)
+    try {
+      const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
+        import("jspdf"),
+        import("html2canvas"),
+      ])
+
+      const element = printAreaRef.current
+      const canvas = await html2canvas(element, {
+        scale: 1.5,
+        useCORS: true,
+        backgroundColor: "#ffffff",
+        logging: false,
+      })
+
+      const imgData = canvas.toDataURL("image/jpeg", 0.92)
+      const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" })
+      const pageW = pdf.internal.pageSize.getWidth()
+      const pageH = pdf.internal.pageSize.getHeight()
+      const imgW = canvas.width
+      const imgH = canvas.height
+      const ratio = pageW / imgW
+      const scaledH = imgH * ratio
+
+      let y = 0
+      let remainingH = scaledH
+
+      pdf.addImage(imgData, "JPEG", 0, y, pageW, scaledH)
+      remainingH -= pageH
+
+      while (remainingH > 0) {
+        y -= pageH
+        pdf.addPage()
+        pdf.addImage(imgData, "JPEG", 0, y, pageW, scaledH)
+        remainingH -= pageH
+      }
+
+      pdf.save(`relatorio-${tabLabel.toLowerCase()}-${from}-${to}.pdf`)
+    } finally {
+      setGeneratingPdf(false)
+    }
+  }
+
   // ─── render ───────────────────────────────────────────────────────────────
 
   return (
@@ -285,7 +332,8 @@ export default function RelatoriosPage() {
         <div className="flex gap-2 no-print">
           <button
             onClick={handlePrint}
-            className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-md text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+            disabled={loading || generatingPdf}
+            className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-md text-sm text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 00-1.913-.247M6.34 18H5.25A2.25 2.25 0 013 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 011.913-.247m10.5 0a48.536 48.536 0 00-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5zm-3 0h.008v.008H15V10.5z" />
@@ -293,13 +341,26 @@ export default function RelatoriosPage() {
             Imprimir
           </button>
           <button
-            onClick={handlePrint}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm transition-colors"
+            onClick={handleDownloadPDF}
+            disabled={loading || generatingPdf}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-            </svg>
-            Baixar PDF
+            {generatingPdf ? (
+              <>
+                <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                </svg>
+                Gerando...
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                </svg>
+                Baixar PDF
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -328,31 +389,35 @@ export default function RelatoriosPage() {
         ))}
       </div>
 
-      {/* Cabeçalho visível apenas na impressão */}
-      <div className="hidden print:block mb-4 border-b border-gray-300 pb-3">
-        <p className="text-lg font-bold text-gray-900">Relatório — {tabLabel}</p>
-        <p className="text-sm text-gray-500">Período: {from} até {to}</p>
-      </div>
-
       {/* Abas */}
       <div className="flex gap-1 mb-5 border-b border-gray-200 no-print">
         {(["dre", "produtos", "vendedores"] as Tab[]).map((t) => (
           <button key={t} onClick={() => setTab(t)}
-            className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${tab === t ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}>
+            disabled={loading || generatingPdf}
+            className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px disabled:opacity-50 ${tab === t ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}>
             {t === "dre" ? "DRE" : t === "produtos" ? "Produtos" : "Vendedores"}
           </button>
         ))}
       </div>
 
-      {loading ? (
-        <div className="text-sm text-gray-400 py-12 text-center">Calculando relatório...</div>
-      ) : (
-        <>
-          {tab === "dre" && <DreTab />}
-          {tab === "produtos" && <ProdutosTab />}
-          {tab === "vendedores" && <VendedoresTab />}
-        </>
-      )}
+      {/* Área capturada para PDF e impressão */}
+      <div ref={printAreaRef}>
+        {/* Cabeçalho visível só no PDF/impressão */}
+        <div className="hidden print:block mb-4 border-b border-gray-300 pb-3">
+          <p className="text-lg font-bold text-gray-900">Relatório — {tabLabel}</p>
+          <p className="text-sm text-gray-500">Período: {from} até {to}</p>
+        </div>
+
+        {loading ? (
+          <div className="text-sm text-gray-400 py-12 text-center">Calculando relatório...</div>
+        ) : (
+          <>
+            {tab === "dre" && <DreTab />}
+            {tab === "produtos" && <ProdutosTab />}
+            {tab === "vendedores" && <VendedoresTab />}
+          </>
+        )}
+      </div>
     </div>
   )
 }

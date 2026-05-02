@@ -4,15 +4,18 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 
 interface Store { id: string; name: string }
-interface Product { id: string; brand: string; model: string; amperage: number; costPrice: number; weight: number | null }
+interface Product { id: string; brand: string; model: string; amperage: number; costPrice: number }
 interface Supplier { id: string; name: string; cascoReturnMode: string; cascoWeightKg: number | null }
+interface CascoRow { amperage: string; quantity: string; weightKg: string }
 
 export default function EntradaEstoquePage() {
   const router = useRouter()
+
+  const [dataLoaded, setDataLoaded] = useState(false)
   const [stores, setStores] = useState<Store[]>([])
   const [products, setProducts] = useState<Product[]>([])
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
-  const [loading, setLoading] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState("")
   const [error, setError] = useState("")
 
@@ -26,36 +29,43 @@ export default function EntradaEstoquePage() {
     notes: "",
   })
 
+  const [cascosSent, setCascosSent] = useState(false)
+  const [cascoRows, setCascoRows] = useState<CascoRow[]>([{ amperage: "", quantity: "1", weightKg: "" }])
+
   useEffect(() => {
-    fetch("/api/lojas").then((r) => r.json()).then((data) => {
-      setStores(data)
-      if (data.length > 0) setForm((p) => ({ ...p, storeId: data[0].id }))
-    })
-    fetch("/api/produtos?limit=500").then((r) => r.json()).then((data) => {
+    Promise.all([
+      fetch("/api/lojas").then((r) => r.json()),
+      fetch("/api/produtos?limit=500").then((r) => r.json()),
+      fetch("/api/fornecedores?active=true").then((r) => r.json()),
+    ]).then(([storesData, prodData, suppData]) => {
+      const storeList: Store[] = Array.isArray(storesData) ? storesData : []
+      setStores(storeList)
+      if (storeList.length > 0) setForm((p) => ({ ...p, storeId: storeList[0].id }))
+
       setProducts(
-        (data.products ?? []).map((p: any) => ({
+        (prodData.products ?? []).map((p: any) => ({
           id: p.id,
           brand: p.brand?.name ?? "",
           model: p.model,
           amperage: p.amperage,
           costPrice: p.costPrice,
-          weight: p.weight ?? null,
         }))
       )
-    })
-    fetch("/api/fornecedores?active=true").then((r) => r.json()).then((data) => {
+
       setSuppliers(
-        (Array.isArray(data) ? data : []).map((s: any) => ({
+        (Array.isArray(suppData) ? suppData : []).map((s: any) => ({
           id: s.id,
           name: s.name,
           cascoReturnMode: s.cascoReturnMode ?? "NONE",
           cascoWeightKg: s.cascoWeightKg ?? null,
         }))
       )
+
+      setDataLoaded(true)
     })
   }, [])
 
-  function set(field: string, value: string) {
+  function setField(field: string, value: string) {
     setForm((p) => ({ ...p, [field]: value }))
   }
 
@@ -68,35 +78,69 @@ export default function EntradaEstoquePage() {
     }))
   }
 
+  function handleSupplierChange(supplierId: string) {
+    setForm((p) => ({ ...p, supplierId }))
+    setCascosSent(false)
+    setCascoRows([{ amperage: "", quantity: "1", weightKg: "" }])
+  }
+
+  // Atualiza linha de casco
+  function setCascoRow(index: number, field: keyof CascoRow, value: string) {
+    setCascoRows((rows) => {
+      const updated = [...rows]
+      updated[index] = { ...updated[index], [field]: value }
+
+      // Auto-calcular peso se fornecedor usa WEIGHT e tem cascoWeightKg
+      if (field === "quantity" && selectedSupplier?.cascoReturnMode === "WEIGHT" && selectedSupplier.cascoWeightKg) {
+        const qty = parseFloat(value) || 0
+        updated[index].weightKg = (qty * selectedSupplier.cascoWeightKg).toFixed(1)
+      }
+
+      return updated
+    })
+  }
+
+  function addCascoRow() {
+    setCascoRows((r) => [...r, { amperage: "", quantity: "1", weightKg: "" }])
+  }
+
+  function removeCascoRow(index: number) {
+    setCascoRows((r) => r.filter((_, i) => i !== index))
+  }
+
   const selectedProduct = products.find((p) => p.id === form.productId)
   const selectedSupplier = suppliers.find((s) => s.id === form.supplierId)
   const qty = parseInt(form.quantity) || 0
-
-  // Cálculo automático de cascos com base no fornecedor
-  const cascoInfo = (() => {
-    if (!selectedSupplier || selectedSupplier.cascoReturnMode === "NONE") return null
-    if (selectedSupplier.cascoReturnMode === "UNIT") {
-      return { label: "Cascos a devolver", value: `${qty} unidade${qty !== 1 ? "s" : ""}` }
-    }
-    if (selectedSupplier.cascoReturnMode === "WEIGHT") {
-      const unitWeight = selectedSupplier.cascoWeightKg ?? selectedProduct?.weight ?? null
-      if (unitWeight && qty > 0) {
-        return { label: "Peso a devolver", value: `${(qty * unitWeight).toFixed(1)} kg (${unitWeight} kg × ${qty})` }
-      }
-      return { label: "Peso a devolver", value: "Configure o peso médio no cadastro do fornecedor" }
-    }
-    return null
-  })()
+  const showWeight = selectedSupplier?.cascoReturnMode === "WEIGHT"
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError("")
     setSuccess("")
+
     if (!form.storeId || !form.productId || !form.quantity || !form.costPrice) {
       setError("Preencha todos os campos obrigatórios.")
       return
     }
-    setLoading(true)
+
+    // Validar cascos se foram enviados
+    if (cascosSent) {
+      for (const row of cascoRows) {
+        if (!row.amperage) { setError("Informe a amperagem de todos os cascos."); return }
+        if (!row.quantity || parseInt(row.quantity) < 1) { setError("Informe a quantidade de cada casco."); return }
+        if (showWeight && !row.weightKg) { setError("Informe o peso de todos os cascos."); return }
+      }
+    }
+
+    setSubmitting(true)
+
+    const cascos = cascosSent
+      ? cascoRows.map((r) => ({
+          amperage: r.amperage,
+          quantity: r.quantity,
+          weightKg: showWeight ? r.weightKg : null,
+        }))
+      : []
 
     const res = await fetch("/api/estoque/entrada", {
       method: "POST",
@@ -109,10 +153,12 @@ export default function EntradaEstoquePage() {
         costPrice: parseFloat(form.costPrice),
         batchNumber: form.batchNumber || null,
         notes: form.notes || null,
+        cascos,
       }),
     })
     const data = await res.json()
-    setLoading(false)
+    setSubmitting(false)
+
     if (res.ok) {
       setSuccess(`${data.count} unidade(s) adicionada(s) ao estoque com sucesso.`)
       setForm((p) => ({
@@ -124,9 +170,23 @@ export default function EntradaEstoquePage() {
         batchNumber: "",
         notes: "",
       }))
+      setCascosSent(false)
+      setCascoRows([{ amperage: "", quantity: "1", weightKg: "" }])
     } else {
       setError(data.error ?? "Erro ao registrar entrada")
     }
+  }
+
+  if (!dataLoaded) {
+    return (
+      <div className="p-6 max-w-xl">
+        <div className="mb-6">
+          <h1 className="text-xl font-semibold text-gray-900">Entrada de Estoque</h1>
+          <p className="text-sm text-gray-500 mt-0.5">Registrar recebimento de baterias</p>
+        </div>
+        <div className="text-sm text-gray-400">Carregando dados...</div>
+      </div>
+    )
   }
 
   return (
@@ -145,7 +205,7 @@ export default function EntradaEstoquePage() {
               <label className="block text-xs font-medium text-gray-600 mb-1">Loja *</label>
               <select
                 value={form.storeId}
-                onChange={(e) => set("storeId", e.target.value)}
+                onChange={(e) => setField("storeId", e.target.value)}
                 required
                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
@@ -158,7 +218,7 @@ export default function EntradaEstoquePage() {
             <label className="block text-xs font-medium text-gray-600 mb-1">Fornecedor</label>
             <select
               value={form.supplierId}
-              onChange={(e) => set("supplierId", e.target.value)}
+              onChange={(e) => handleSupplierChange(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">Sem fornecedor vinculado</option>
@@ -193,7 +253,7 @@ export default function EntradaEstoquePage() {
                 min="1"
                 max="500"
                 value={form.quantity}
-                onChange={(e) => set("quantity", e.target.value)}
+                onChange={(e) => setField("quantity", e.target.value)}
                 required
                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
@@ -205,7 +265,7 @@ export default function EntradaEstoquePage() {
                 step="0.01"
                 min="0"
                 value={form.costPrice}
-                onChange={(e) => set("costPrice", e.target.value)}
+                onChange={(e) => setField("costPrice", e.target.value)}
                 required
                 placeholder={selectedProduct ? String(selectedProduct.costPrice) : "0.00"}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -218,7 +278,7 @@ export default function EntradaEstoquePage() {
             <input
               type="text"
               value={form.batchNumber}
-              onChange={(e) => set("batchNumber", e.target.value)}
+              onChange={(e) => setField("batchNumber", e.target.value)}
               placeholder="Ex: L2024-01"
               className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
@@ -228,7 +288,7 @@ export default function EntradaEstoquePage() {
             <label className="block text-xs font-medium text-gray-600 mb-1">Observações</label>
             <textarea
               value={form.notes}
-              onChange={(e) => set("notes", e.target.value)}
+              onChange={(e) => setField("notes", e.target.value)}
               rows={2}
               placeholder="Nota fiscal, etc..."
               className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
@@ -236,24 +296,107 @@ export default function EntradaEstoquePage() {
           </div>
         </div>
 
-        {/* Devolução de cascos — calculada automaticamente pelo fornecedor */}
-        {cascoInfo ? (
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-            <p className="text-xs font-semibold text-amber-800 mb-1">Devolução de Cascos</p>
-            <p className="text-sm text-amber-900">
-              <span className="font-medium">{cascoInfo.label}:</span> {cascoInfo.value}
-            </p>
-            <p className="text-xs text-amber-600 mt-1">
-              Regra configurada no cadastro do fornecedor <strong>{selectedSupplier?.name}</strong>.
-            </p>
+        {/* Seção de Sucatas */}
+        <div className="bg-white border border-gray-200 rounded-lg p-5 space-y-4">
+          <div className="flex items-center justify-between border-b border-gray-100 pb-2">
+            <div>
+              <h2 className="text-sm font-semibold text-gray-700">Sucatas Enviadas</h2>
+              {selectedSupplier && selectedSupplier.cascoReturnMode !== "NONE" && (
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {selectedSupplier.name} exige devolução{" "}
+                  {selectedSupplier.cascoReturnMode === "WEIGHT"
+                    ? `por peso${selectedSupplier.cascoWeightKg ? ` (~${selectedSupplier.cascoWeightKg} kg/un)` : ""}`
+                    : "por unidade"}
+                </p>
+              )}
+            </div>
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <span className="text-xs text-gray-600">Foram enviadas sucatas?</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setCascosSent((v) => !v)
+                  setCascoRows([{ amperage: "", quantity: "1", weightKg: "" }])
+                }}
+                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${
+                  cascosSent ? "bg-amber-500" : "bg-gray-300"
+                }`}
+              >
+                <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${cascosSent ? "translate-x-4" : "translate-x-0.5"}`} />
+              </button>
+            </label>
           </div>
-        ) : selectedSupplier && selectedSupplier.cascoReturnMode === "NONE" ? (
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-            <p className="text-xs text-gray-500">
-              O fornecedor <strong>{selectedSupplier.name}</strong> não exige devolução de cascos.
-            </p>
-          </div>
-        ) : null}
+
+          {cascosSent && (
+            <div className="space-y-3">
+              {/* Cabeçalho da tabela */}
+              <div className={`grid gap-2 text-xs font-medium text-gray-500 ${showWeight ? "grid-cols-[1fr_80px_100px_32px]" : "grid-cols-[1fr_80px_32px]"}`}>
+                <span>Amperagem (Ah)</span>
+                <span>Qtd</span>
+                {showWeight && <span>Peso total (kg)</span>}
+                <span />
+              </div>
+
+              {cascoRows.map((row, i) => (
+                <div key={i} className={`grid gap-2 items-center ${showWeight ? "grid-cols-[1fr_80px_100px_32px]" : "grid-cols-[1fr_80px_32px]"}`}>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="1"
+                    value={row.amperage}
+                    onChange={(e) => setCascoRow(i, "amperage", e.target.value)}
+                    placeholder="Ex: 60"
+                    className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                  />
+                  <input
+                    type="number"
+                    min="1"
+                    value={row.quantity}
+                    onChange={(e) => setCascoRow(i, "quantity", e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                  />
+                  {showWeight && (
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      value={row.weightKg}
+                      onChange={(e) => setCascoRow(i, "weightKg", e.target.value)}
+                      placeholder="0.0"
+                      className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    />
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => removeCascoRow(i)}
+                    disabled={cascoRows.length === 1}
+                    className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-red-500 disabled:opacity-30 disabled:cursor-not-allowed rounded"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+
+              <button
+                type="button"
+                onClick={addCascoRow}
+                className="text-xs text-amber-700 hover:text-amber-900 font-medium"
+              >
+                + Adicionar amperagem
+              </button>
+
+              {showWeight && (
+                <p className="text-xs text-gray-400">
+                  Peso calculado automaticamente com base no fornecedor. Você pode ajustar manualmente.
+                </p>
+              )}
+            </div>
+          )}
+
+          {!cascosSent && (
+            <p className="text-xs text-gray-400">Nenhuma sucata foi enviada nesta compra.</p>
+          )}
+        </div>
 
         {form.productId && form.quantity && form.costPrice && (
           <div className="bg-blue-50 border border-blue-200 rounded-md px-4 py-3 text-sm text-blue-700">
@@ -268,15 +411,22 @@ export default function EntradaEstoquePage() {
         <div className="flex gap-3">
           <button
             type="submit"
-            disabled={loading}
-            className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-5 py-2 rounded-md transition-colors disabled:opacity-50"
+            disabled={submitting}
+            className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-5 py-2 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
-            {loading ? "Registrando..." : "Registrar Entrada"}
+            {submitting && (
+              <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+              </svg>
+            )}
+            {submitting ? "Registrando..." : "Registrar Entrada"}
           </button>
           <button
             type="button"
             onClick={() => router.push("/estoque/posicao")}
-            className="px-5 py-2 border border-gray-300 rounded-md text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+            disabled={submitting}
+            className="px-5 py-2 border border-gray-300 rounded-md text-sm text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
           >
             Ver Posição
           </button>

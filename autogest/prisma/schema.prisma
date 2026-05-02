@@ -473,6 +473,7 @@ model UsedBattery {
   stockItemId     String?
   supplierId      String?
   purchaseOrderId String?
+  amperage        Float?
   discountValue   Float?
   weightKg        Float?
   quantity        Int       @default(1)

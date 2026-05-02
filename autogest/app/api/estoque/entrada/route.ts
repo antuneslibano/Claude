@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
   const userId = (session.user as any).id
   const companyId = (session.user as any).companyId
 
-  const { productId, storeId, quantity, costPrice, supplierId, batchNumber, notes } =
+  const { productId, storeId, quantity, costPrice, supplierId, batchNumber, notes, cascos } =
     await req.json()
 
   if (!productId || !storeId || !quantity || !costPrice) {
@@ -19,7 +19,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Quantidade inválida" }, { status: 400 })
   }
 
-  // Validate store belongs to company
   const store = await prisma.store.findFirst({ where: { id: storeId, companyId } })
   if (!store) return NextResponse.json({ error: "Loja inválida" }, { status: 400 })
 
@@ -47,10 +46,31 @@ export async function POST(req: NextRequest) {
           userId,
           type: "PURCHASE",
           reason: notes || "Entrada de estoque",
+          ...(supplierId && { supplierId }),
         },
       })
       created.push(item)
     }
+
+    // Registra cascos enviados ao fornecedor (agrupados por amperagem)
+    if (Array.isArray(cascos) && cascos.length > 0) {
+      for (const c of cascos) {
+        const qty = parseInt(c.quantity) || 0
+        if (qty <= 0) continue
+        await tx.usedBattery.create({
+          data: {
+            storeId,
+            supplierId: supplierId || null,
+            amperage: c.amperage ? parseFloat(c.amperage) : null,
+            quantity: qty,
+            weightKg: c.weightKg ? parseFloat(c.weightKg) : null,
+            status: "SENT_TO_SUPPLIER",
+            notes: `Enviado com entrada de estoque`,
+          },
+        })
+      }
+    }
+
     return created
   })
 
