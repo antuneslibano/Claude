@@ -64,7 +64,8 @@
       "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); node --version; npm --version)",
       "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); Set-Location \"c:\\\\Users\\\\riosl\\\\Downloads\\\\Claude\\\\Claude\\\\autogest\"; npm install 2>&1 | Select-Object -Last 20)",
       "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); Set-Location \"c:\\\\Users\\\\riosl\\\\Downloads\\\\Claude\\\\Claude\\\\autogest\"; npx prisma db push 2>&1)",
-      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); Set-Location \"c:\\\\Users\\\\riosl\\\\Downloads\\\\Claude\\\\Claude\\\\autogest\"; Start-Process -FilePath \"cmd.exe\" -ArgumentList \"/c npm run dev > dev.log 2>&1\" -WindowStyle Hidden; Start-Sleep -Seconds 8; Get-Content dev.log)"
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); Set-Location \"c:\\\\Users\\\\riosl\\\\Downloads\\\\Claude\\\\Claude\\\\autogest\"; Start-Process -FilePath \"cmd.exe\" -ArgumentList \"/c npm run dev > dev.log 2>&1\" -WindowStyle Hidden; Start-Sleep -Seconds 8; Get-Content dev.log)",
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); Set-Location \"c:\\\\Users\\\\riosl\\\\Downloads\\\\Claude\\\\Claude\\\\autogest\"; node scripts/create-admin.mjs)"
     ]
   },
   "hooks": {
