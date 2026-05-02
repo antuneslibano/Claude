@@ -48,6 +48,8 @@ export default function CascosPage() {
     description: "",
     discountValue: "",
     notes: "",
+    quantity: "1",
+    weightKg: "",
   })
 
   async function load() {
@@ -94,12 +96,15 @@ export default function CascosPage() {
         description: form.description || undefined,
         discountValue: form.discountValue || undefined,
         notes: form.notes || undefined,
+        quantity: parseInt(form.quantity) || 1,
+        weightKg: form.weightKg ? parseFloat(form.weightKg) : undefined,
       }),
     })
     setSaving(false)
     if (res.ok) {
-      setSuccess("Casco registrado com sucesso.")
-      setForm((p) => ({ ...p, customerId: "", description: "", discountValue: "", notes: "" }))
+      const qty = parseInt(form.quantity) || 1
+      setSuccess(qty > 1 ? `${qty} cascos registrados com sucesso.` : "Casco registrado com sucesso.")
+      setForm((p) => ({ ...p, customerId: "", description: "", discountValue: "", notes: "", quantity: "1", weightKg: "" }))
       setCustomerSearch("")
       setShowForm(false)
       load()
@@ -125,7 +130,7 @@ export default function CascosPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-semibold text-gray-900">Cascos</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Baterias usadas recebidas em troca ou devolução</p>
+          <p className="text-sm text-gray-500 mt-0.5">Baterias usadas recebidas em troca ou devolucao</p>
         </div>
         <button
           onClick={() => { setShowForm((v) => !v); setError(""); setSuccess("") }}
@@ -150,7 +155,7 @@ export default function CascosPage() {
         ))}
       </div>
 
-      {/* Formulário de registro */}
+      {/* Formulario de registro */}
       {showForm && (
         <form onSubmit={handleSubmit} className="bg-white border border-blue-200 rounded-lg p-5 mb-6 space-y-4">
           <h2 className="text-sm font-semibold text-gray-700 border-b border-gray-100 pb-2">Registrar Casco Recebido</h2>
@@ -203,16 +208,46 @@ export default function CascosPage() {
             </div>
           </div>
 
+          {/* Quantidade e Peso */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Quantidade</label>
+              <input
+                type="number"
+                min="1"
+                max="100"
+                value={form.quantity}
+                onChange={(e) => setForm((p) => ({ ...p, quantity: e.target.value }))}
+                className="w-24 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              {parseInt(form.quantity) > 1 && (
+                <p className="text-xs text-gray-400 mt-1">Serao criados {form.quantity} registros</p>
+              )}
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Peso total (kg)</label>
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                value={form.weightKg}
+                onChange={(e) => setForm((p) => ({ ...p, weightKg: e.target.value }))}
+                placeholder="Opcional"
+                className="w-32 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Descrição da bateria</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Descricao da bateria</label>
             <input type="text" value={form.description}
               onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
-              placeholder="Ex: 60Ah sem identificação, corrosão nos terminais..."
+              placeholder="Ex: 60Ah sem identificacao, corrosao nos terminais..."
               className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Observações</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Observacoes</label>
             <textarea value={form.notes} onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))} rows={2}
               className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
@@ -255,7 +290,7 @@ export default function CascosPage() {
               <tr className="bg-gray-50 border-b border-gray-200 text-left">
                 <th className="px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Recebido em</th>
                 <th className="px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
-                <th className="px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Produto / Descrição</th>
+                <th className="px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Produto / Descricao</th>
                 <th className="px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Desconto</th>
                 <th className="px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                 <th className="px-4 py-3" />
@@ -274,7 +309,7 @@ export default function CascosPage() {
                         <p className="font-medium text-gray-900">{item.customer.name}</p>
                         {item.customer.phone && <p className="text-xs text-gray-400">{item.customer.phone}</p>}
                       </>
-                    ) : <span className="text-xs text-gray-400">—</span>}
+                    ) : <span className="text-xs text-gray-400">-</span>}
                   </td>
                   <td className="px-4 py-3">
                     {item.stockItem ? (
@@ -282,13 +317,13 @@ export default function CascosPage() {
                         {item.stockItem.product.brand.name} {item.stockItem.product.model} ({item.stockItem.product.amperage}Ah)
                       </p>
                     ) : (
-                      <p className="text-gray-600 text-xs">{item.notes ?? "—"}</p>
+                      <p className="text-gray-600 text-xs">{item.notes ?? "-"}</p>
                     )}
                   </td>
                   <td className="px-4 py-3">
                     {item.discountValue != null
                       ? <span className="text-green-700 font-medium">R$ {item.discountValue.toFixed(2)}</span>
-                      : <span className="text-gray-400 text-xs">—</span>}
+                      : <span className="text-gray-400 text-xs">-</span>}
                   </td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${STATUS_COLORS[item.status] ?? "bg-gray-100 text-gray-600"}`}>

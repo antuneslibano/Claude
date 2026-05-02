@@ -68,7 +68,7 @@ export async function GET() {
     return NextResponse.json([])
   }
 
-  const supplierIds = [...requiredBySupplier.keys()]
+  const supplierIds = Array.from(requiredBySupplier.keys())
 
   // Buscar cascos já enviados agrupados por supplierId
   const sentBatteries = await prisma.usedBattery.findMany({
@@ -95,7 +95,7 @@ export async function GET() {
   }
 
   // Montar resposta final
-  const result = [...requiredBySupplier.values()].map((entry) => {
+  const result = Array.from(requiredBySupplier.values()).map((entry) => {
     const sent = sentBySupplier.get(entry.supplierId) ?? { sentUnits: 0, sentWeight: 0 }
 
     const isUnit = entry.cascoMode === "UNIT"

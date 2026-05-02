@@ -21,6 +21,10 @@ export default function EntradaEstoquePage() {
     costPrice: "",
     batchNumber: "",
     notes: "",
+    hasCascoRequirement: "false",
+    cascoMode: "UNIT",
+    cascosRequired: "",
+    cascoWeightKg: "",
   })
 
   useEffect(() => {
@@ -59,10 +63,21 @@ export default function EntradaEstoquePage() {
     setError("")
     setSuccess("")
     if (!form.storeId || !form.productId || !form.quantity || !form.costPrice) {
-      setError("Preencha todos os campos obrigatórios.")
+      setError("Preencha todos os campos obrigatorios.")
       return
     }
     setLoading(true)
+
+    // Monta observacao com info de cascos se necessario
+    let notesValue = form.notes || null
+    if (form.hasCascoRequirement === "true") {
+      const cascoInfo =
+        form.cascoMode === "UNIT"
+          ? `Devolucao de cascos: ${form.cascosRequired || "?"} unidades`
+          : `Devolucao de cascos: ${form.cascoWeightKg || "?"} kg`
+      notesValue = notesValue ? `${notesValue} | ${cascoInfo}` : cascoInfo
+    }
+
     const res = await fetch("/api/estoque/entrada", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -72,14 +87,25 @@ export default function EntradaEstoquePage() {
         quantity: parseInt(form.quantity),
         costPrice: parseFloat(form.costPrice),
         batchNumber: form.batchNumber || null,
-        notes: form.notes || null,
+        notes: notesValue,
       }),
     })
     const data = await res.json()
     setLoading(false)
     if (res.ok) {
       setSuccess(`${data.count} unidade(s) adicionada(s) ao estoque com sucesso.`)
-      setForm((p) => ({ ...p, productId: "", quantity: "1", costPrice: "", batchNumber: "", notes: "" }))
+      setForm((p) => ({
+        ...p,
+        productId: "",
+        quantity: "1",
+        costPrice: "",
+        batchNumber: "",
+        notes: "",
+        hasCascoRequirement: "false",
+        cascoMode: "UNIT",
+        cascosRequired: "",
+        cascoWeightKg: "",
+      }))
     } else {
       setError(data.error ?? "Erro ao registrar entrada")
     }
@@ -143,7 +169,7 @@ export default function EntradaEstoquePage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Custo unitário (R$) *</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Custo unitario (R$) *</label>
               <input
                 type="number"
                 step="0.01"
@@ -158,7 +184,7 @@ export default function EntradaEstoquePage() {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Número do Lote</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Numero do Lote</label>
             <input
               type="text"
               value={form.batchNumber}
@@ -169,7 +195,7 @@ export default function EntradaEstoquePage() {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Observações</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Observacoes</label>
             <textarea
               value={form.notes}
               onChange={(e) => set("notes", e.target.value)}
@@ -180,10 +206,78 @@ export default function EntradaEstoquePage() {
           </div>
         </div>
 
+        {/* Secao de cascos */}
+        <div className="bg-white border border-gray-200 rounded-lg p-5 space-y-4">
+          <div className="flex items-center justify-between border-b border-gray-100 pb-2">
+            <h2 className="text-sm font-semibold text-gray-700">Devolucao de Cascos</h2>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.hasCascoRequirement === "true"}
+                onChange={(e) => set("hasCascoRequirement", e.target.checked ? "true" : "false")}
+                className="w-4 h-4 rounded border-gray-300 text-blue-600"
+              />
+              <span className="text-xs text-gray-600">Exige devolucao de cascos</span>
+            </label>
+          </div>
+
+          {form.hasCascoRequirement === "true" && (
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Modo de cobranca</label>
+                <div className="flex gap-3">
+                  {[{ v: "UNIT", l: "Por unidade" }, { v: "WEIGHT", l: "Por peso (kg)" }].map((opt) => (
+                    <label key={opt.v} className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="cascoMode"
+                        value={opt.v}
+                        checked={form.cascoMode === opt.v}
+                        onChange={() => set("cascoMode", opt.v)}
+                        className="text-blue-600"
+                      />
+                      <span className="text-sm text-gray-700">{opt.l}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {form.cascoMode === "UNIT" && (
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Quantidade de cascos a devolver</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={form.cascosRequired}
+                    onChange={(e) => set("cascosRequired", e.target.value)}
+                    placeholder="Ex: 10"
+                    className="w-32 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              )}
+
+              {form.cascoMode === "WEIGHT" && (
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Peso de cascos a devolver (kg)</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    value={form.cascoWeightKg}
+                    onChange={(e) => set("cascoWeightKg", e.target.value)}
+                    placeholder="Ex: 50.5"
+                    className="w-32 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
         {form.productId && form.quantity && form.costPrice && (
           <div className="bg-blue-50 border border-blue-200 rounded-md px-4 py-3 text-sm text-blue-700">
             Total estimado: <strong>R$ {(parseInt(form.quantity || "0") * parseFloat(form.costPrice || "0")).toFixed(2)}</strong>
-            {" "}({form.quantity} × R$ {parseFloat(form.costPrice || "0").toFixed(2)})
+            {" "}({form.quantity} x R$ {parseFloat(form.costPrice || "0").toFixed(2)})
           </div>
         )}
 
@@ -203,7 +297,7 @@ export default function EntradaEstoquePage() {
             onClick={() => router.push("/estoque/posicao")}
             className="px-5 py-2 border border-gray-300 rounded-md text-sm text-gray-600 hover:bg-gray-50 transition-colors"
           >
-            Ver Posição
+            Ver Posicao
           </button>
         </div>
       </form>

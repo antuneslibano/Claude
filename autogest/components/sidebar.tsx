@@ -13,7 +13,14 @@ const ROLE_LABELS: Record<string, string> = {
 }
 
 interface NavChild { label: string; href: string; disabled?: boolean }
-interface NavItem { label: string; icon?: string; href?: string; disabled?: boolean; children?: NavChild[] }
+interface NavItem {
+  label: string
+  icon?: string
+  href?: string
+  disabled?: boolean
+  adminOnly?: boolean
+  children?: NavChild[]
+}
 
 const nav: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: "▦" },
@@ -58,6 +65,15 @@ const nav: NavItem[] = [
     ],
   },
   { label: "Relatórios", href: "/relatorios", icon: "◩" },
+  {
+    label: "Configurações",
+    icon: "⚙",
+    adminOnly: true,
+    children: [
+      { label: "Lojas", href: "/configuracoes/lojas" },
+      { label: "Empresa", href: "/configuracoes/empresa" },
+    ],
+  },
 ]
 
 interface SidebarProps {
@@ -80,6 +96,9 @@ export default function Sidebar({ userName, companyName, role }: SidebarProps) {
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
         {nav.map((item) => {
+          // Oculta itens adminOnly para nao-admins
+          if (item.adminOnly && role !== "ADMIN") return null
+
           if (item.children) {
             const isGroupActive = item.children.some((c) => !c.disabled && pathname.startsWith(c.href))
             return (

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import Combobox from "@/components/combobox"
 
 const VEHICLE_TYPES = [
   { value: "CAR", label: "Carro" },
@@ -34,12 +35,52 @@ interface ProductFormProps {
   }
 }
 
+// Field definido FORA do componente pai para evitar recriação a cada render
+// e consequente perda de foco nos inputs
+function Field({
+  label,
+  name,
+  value,
+  onChange,
+  type = "text",
+  placeholder = "",
+  required = false,
+  className = "",
+}: {
+  label: string
+  name: string
+  value: string
+  onChange: (v: string) => void
+  type?: string
+  placeholder?: string
+  required?: boolean
+  className?: string
+}) {
+  return (
+    <div className={className}>
+      <label className="block text-xs font-medium text-gray-700 mb-1">
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        required={required}
+        step={type === "number" ? "any" : undefined}
+        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+      />
+    </div>
+  )
+}
+
 export default function ProdutoForm({ initialData }: ProductFormProps) {
   const router = useRouter()
   const isEdit = !!initialData
   const [brands, setBrands] = useState<Brand[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [creatingBrand, setCreatingBrand] = useState(false)
 
   const [form, setForm] = useState({
     brandId: initialData?.brandId ?? "",
@@ -65,6 +106,28 @@ export default function ProdutoForm({ initialData }: ProductFormProps) {
 
   const set = (key: string, value: string | boolean) =>
     setForm((f) => ({ ...f, [key]: value }))
+
+  async function handleCreateBrand(name: string) {
+    setCreatingBrand(true)
+    try {
+      const res = await fetch("/api/marcas", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setBrands((prev) => [...prev, { id: data.id, name: data.name }].sort((a, b) => a.name.localeCompare(b.name)))
+        set("brandId", data.id)
+      } else {
+        setError(data.error ?? "Erro ao criar marca")
+      }
+    } catch {
+      setError("Erro ao criar marca")
+    } finally {
+      setCreatingBrand(false)
+    }
+  }
 
   const margin =
     form.costPrice && form.salePrice
@@ -97,27 +160,6 @@ export default function ProdutoForm({ initialData }: ProductFormProps) {
     router.refresh()
   }
 
-  const Field = ({
-    label, name, type = "text", placeholder = "", required = false, className = "",
-  }: {
-    label: string; name: string; type?: string; placeholder?: string; required?: boolean; className?: string
-  }) => (
-    <div className={className}>
-      <label className="block text-xs font-medium text-gray-700 mb-1">
-        {label} {required && <span className="text-red-500">*</span>}
-      </label>
-      <input
-        type={type}
-        value={(form as any)[name]}
-        onChange={(e) => set(name, e.target.value)}
-        placeholder={placeholder}
-        required={required}
-        step={type === "number" ? "any" : undefined}
-        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-      />
-    </div>
-  )
-
   return (
     <form onSubmit={handleSubmit} className="p-6 max-w-4xl">
       <div className="flex items-center justify-between mb-6">
@@ -132,7 +174,7 @@ export default function ProdutoForm({ initialData }: ProductFormProps) {
           onClick={() => router.back()}
           className="text-sm text-gray-500 hover:text-gray-700"
         >
-          ← Voltar
+          Voltar
         </button>
       </div>
 
@@ -145,19 +187,28 @@ export default function ProdutoForm({ initialData }: ProductFormProps) {
               <label className="block text-xs font-medium text-gray-700 mb-1">
                 Marca <span className="text-red-500">*</span>
               </label>
-              <select
+              <Combobox
+                options={brands.map((b) => ({ value: b.id, label: b.name }))}
                 value={form.brandId}
-                onChange={(e) => set("brandId", e.target.value)}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Selecionar marca</option>
-                {brands.map((b) => (
-                  <option key={b.id} value={b.id}>{b.name}</option>
-                ))}
-              </select>
+                onChange={(v) => set("brandId", v)}
+                placeholder="Selecionar ou criar marca..."
+                allowCreate
+                onCreateNew={handleCreateBrand}
+                disabled={creatingBrand}
+              />
+              {creatingBrand && (
+                <p className="text-xs text-blue-500 mt-1">Criando marca...</p>
+              )}
             </div>
-            <Field label="Modelo" name="model" placeholder='ex: "60AH Free"' required className="" />
+            <Field
+              label="Modelo"
+              name="model"
+              value={form.model}
+              onChange={(v) => set("model", v)}
+              placeholder='ex: "60AH Free"'
+              required
+              className=""
+            />
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">
                 Tipo de Veículo <span className="text-red-500">*</span>
@@ -172,8 +223,20 @@ export default function ProdutoForm({ initialData }: ProductFormProps) {
                 ))}
               </select>
             </div>
-            <Field label="Código Interno" name="internalCode" placeholder="ex: BAT-001" />
-            <Field label="Código de Barras / QR Code" name="barcode" placeholder="EAN / QR" />
+            <Field
+              label="Código Interno"
+              name="internalCode"
+              value={form.internalCode}
+              onChange={(v) => set("internalCode", v)}
+              placeholder="ex: BAT-001"
+            />
+            <Field
+              label="Código de Barras / QR Code"
+              name="barcode"
+              value={form.barcode}
+              onChange={(v) => set("barcode", v)}
+              placeholder="EAN / QR"
+            />
           </div>
         </section>
 
@@ -181,19 +244,55 @@ export default function ProdutoForm({ initialData }: ProductFormProps) {
         <section className="bg-white border border-gray-200 rounded-lg p-5">
           <h2 className="text-sm font-semibold text-gray-900 mb-4">Especificações Técnicas</h2>
           <div className="grid grid-cols-4 gap-4">
-            <Field label="Amperagem (Ah)" name="amperage" type="number" placeholder="60" required />
-            <Field label="CCA (A frio)" name="coldCrankAmps" type="number" placeholder="Opcional" />
-            <Field label="Voltagem (V)" name="voltage" type="number" placeholder="12" />
-            <Field label="Garantia (meses)" name="warrantyMonths" type="number" placeholder="12" />
-            <Field label="Peso (kg)" name="weight" type="number" placeholder="Opcional" />
+            <Field
+              label="Amperagem (Ah)"
+              name="amperage"
+              value={form.amperage}
+              onChange={(v) => set("amperage", v)}
+              type="number"
+              placeholder="60"
+              required
+            />
+            <Field
+              label="CCA (A frio)"
+              name="coldCrankAmps"
+              value={form.coldCrankAmps}
+              onChange={(v) => set("coldCrankAmps", v)}
+              type="number"
+              placeholder="Opcional"
+            />
+            <Field
+              label="Voltagem (V)"
+              name="voltage"
+              value={form.voltage}
+              onChange={(v) => set("voltage", v)}
+              type="number"
+              placeholder="12"
+            />
+            <Field
+              label="Garantia (meses)"
+              name="warrantyMonths"
+              value={form.warrantyMonths}
+              onChange={(v) => set("warrantyMonths", v)}
+              type="number"
+              placeholder="12"
+            />
+            <Field
+              label="Peso (kg)"
+              name="weight"
+              value={form.weight}
+              onChange={(v) => set("weight", v)}
+              type="number"
+              placeholder="Opcional"
+            />
           </div>
           <div className="mt-4">
-            <label className="block text-xs font-medium text-gray-700 mb-1">Descrição / Observações</label>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Descricao / Observacoes</label>
             <textarea
               value={form.description}
               onChange={(e) => set("description", e.target.value)}
               rows={2}
-              placeholder="Informações adicionais sobre o produto..."
+              placeholder="Informacoes adicionais sobre o produto..."
               className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -201,18 +300,41 @@ export default function ProdutoForm({ initialData }: ProductFormProps) {
 
         {/* Preços */}
         <section className="bg-white border border-gray-200 rounded-lg p-5">
-          <h2 className="text-sm font-semibold text-gray-900 mb-4">Preços</h2>
+          <h2 className="text-sm font-semibold text-gray-900 mb-4">Precos</h2>
           <div className="grid grid-cols-3 gap-4">
-            <Field label="Preço de Custo (R$)" name="costPrice" type="number" placeholder="0,00" required />
+            <Field
+              label="Preco de Custo (R$)"
+              name="costPrice"
+              value={form.costPrice}
+              onChange={(v) => set("costPrice", v)}
+              type="number"
+              placeholder="0,00"
+              required
+            />
             <div>
-              <Field label="Preço de Venda (R$)" name="salePrice" type="number" placeholder="0,00" required />
+              <Field
+                label="Preco de Venda (R$)"
+                name="salePrice"
+                value={form.salePrice}
+                onChange={(v) => set("salePrice", v)}
+                type="number"
+                placeholder="0,00"
+                required
+              />
               {margin && (
                 <p className={`text-xs mt-1 font-medium ${parseFloat(margin) >= 20 ? "text-green-600" : "text-orange-500"}`}>
                   Margem: {margin}%
                 </p>
               )}
             </div>
-            <Field label="Preço Atacado / Oficina (R$)" name="wholesalePrice" type="number" placeholder="Opcional" />
+            <Field
+              label="Preco Atacado / Oficina (R$)"
+              name="wholesalePrice"
+              value={form.wholesalePrice}
+              onChange={(v) => set("wholesalePrice", v)}
+              type="number"
+              placeholder="Opcional"
+            />
           </div>
         </section>
 
@@ -228,7 +350,7 @@ export default function ProdutoForm({ initialData }: ProductFormProps) {
               />
               <div>
                 <p className="text-sm font-medium text-gray-900">Produto ativo</p>
-                <p className="text-xs text-gray-500">Produtos inativos não aparecem nas vendas</p>
+                <p className="text-xs text-gray-500">Produtos inativos nao aparecem nas vendas</p>
               </div>
             </label>
           </section>
@@ -247,7 +369,7 @@ export default function ProdutoForm({ initialData }: ProductFormProps) {
           disabled={loading}
           className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium px-6 py-2 rounded-md transition-colors"
         >
-          {loading ? "Salvando..." : isEdit ? "Salvar alterações" : "Cadastrar produto"}
+          {loading ? "Salvando..." : isEdit ? "Salvar alteracoes" : "Cadastrar produto"}
         </button>
         <button
           type="button"
